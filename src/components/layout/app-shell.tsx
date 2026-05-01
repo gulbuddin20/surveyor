@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import { ClipboardList, FileText, LayoutDashboard, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Profile } from "@/lib/types";
@@ -22,6 +23,11 @@ const adminNav = [
 export function AppShell({ profile, children }: { profile: Profile; children: React.ReactNode }) {
   const nav = profile.role === "super_admin" ? [...userNav, ...adminNav] : userNav;
   const pathname = usePathname();
+
+  useEffect(() => {
+    const mobileSidebar = document.getElementById("mobile-sidebar");
+    if (mobileSidebar instanceof HTMLInputElement) mobileSidebar.checked = false;
+  }, [pathname]);
 
   return (
     <div className="group/shell min-h-screen bg-[radial-gradient(circle_at_top_left,#d1fae5_0,#f8fafc_32rem)] has-[[data-sidebar='collapsed']:checked]:md:[--sidebar-width:5.5rem] md:[--sidebar-width:17rem]">
