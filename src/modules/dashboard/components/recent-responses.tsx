@@ -21,9 +21,9 @@ export function RecentResponses({ rows }: { rows: RecentRow[] }) {
       <div className="space-y-3">
         {rows.length === 0 ? <p className="text-sm text-slate-500">Belum ada survei.</p> : null}
         {rows.map((row) => (
-          <div key={row.id} className="rounded-2xl border border-slate-100 p-4">
+          <div key={row.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 transition hover:border-emerald-100 hover:bg-emerald-50/40">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
+              <div className="min-w-0">
                 <p className="font-semibold text-slate-950">
                   {row.msme_subjects?.business_name ?? "Nama usaha belum ada"}
                 </p>

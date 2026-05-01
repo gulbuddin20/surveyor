@@ -9,12 +9,12 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
+        <div className="min-w-0">
           <p className="text-sm font-semibold text-emerald-700">Dashboard</p>
-          <h1 className="text-3xl font-bold text-slate-950">Halo, {profile.full_name}</h1>
+          <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Halo, {profile.full_name}</h1>
           <p className="mt-1 text-slate-500">Pantau progress digitalisasi survei MSME/TPP.</p>
         </div>
-        <Button asChild><Link href="/surveys">Mulai survei</Link></Button>
+        <Button asChild className="w-full sm:w-auto"><Link href="/surveys">Mulai survei</Link></Button>
       </div>
       <StatsGrid stats={dashboard.stats} />
       <RecentResponses rows={dashboard.recentResponses} />

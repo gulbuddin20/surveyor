@@ -11,7 +11,7 @@ export default async function SurveyResultPage({ params }: { params: Promise<{ i
         <CardDescription>ID response: {id}</CardDescription>
       </CardHeader>
       <p className="text-slate-600">Hasil kalkulasi sudah tersimpan di dashboard.</p>
-      <div className="mt-6 flex justify-center gap-3">
+      <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
         <Button asChild><Link href="/dashboard">Dashboard</Link></Button>
         <Button asChild variant="outline"><Link href="/surveys">Survei lagi</Link></Button>
       </div>

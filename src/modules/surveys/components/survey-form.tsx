@@ -26,7 +26,7 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
   }, [reset, template.id]);
 
   return (
-    <form action={submitSurveyAction} className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <form action={submitSurveyAction} className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
       <input type="hidden" name="templateId" value={template.id} />
       {selectedQuestionIds.map((questionId) => (
         <input key={questionId} type="hidden" name="nonconformities" value={questionId} />
@@ -70,7 +70,7 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
                 return (
                   <label
                     key={question.id}
-                    className="flex cursor-pointer gap-3 rounded-2xl border border-slate-200 p-4 transition hover:bg-slate-50"
+                    className="flex min-h-16 cursor-pointer gap-3 rounded-2xl border border-slate-200 bg-white/70 p-4 transition hover:border-emerald-200 hover:bg-emerald-50/50"
                   >
                     <input
                       checked={checked}
@@ -107,20 +107,20 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
           </div>
         </Card>
       </div>
-      <aside className="lg:sticky lg:top-24 lg:h-fit">
-        <Card>
+      <aside className="xl:sticky xl:top-24 xl:h-fit">
+        <Card className="shadow-lg shadow-slate-900/5">
           <CardHeader>
             <CardTitle>Hasil sementara</CardTitle>
             <CardDescription>{template.name}</CardDescription>
           </CardHeader>
           <div className="space-y-4">
             <Progress value={progress} />
-            <div className="grid grid-cols-2 gap-3 text-center">
-              <div className="rounded-2xl bg-slate-50 p-3">
+            <div className="grid gap-3 text-center sm:grid-cols-2 xl:grid-cols-2">
+              <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
                 <p className="text-xs text-slate-500">Ketidaksesuaian</p>
                 <p className="text-2xl font-bold">{result.totalNonconformity}</p>
               </div>
-              <div className="rounded-2xl bg-emerald-50 p-3">
+              <div className="rounded-2xl bg-emerald-50 p-3 ring-1 ring-emerald-100">
                 <p className="text-xs text-emerald-700">Skor</p>
                 <p className="text-2xl font-bold text-emerald-700">{result.score}</p>
               </div>

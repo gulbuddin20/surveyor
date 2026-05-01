@@ -9,7 +9,7 @@ import { createTemplateAction } from "@/modules/admin/controllers/admin.controll
 
 export function TemplateManagement({ templates }: { templates: SurveyTemplate[] }) {
   return (
-    <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_1fr]">
       <Card>
         <CardHeader>
           <CardTitle>Template baru</CardTitle>
@@ -19,7 +19,7 @@ export function TemplateManagement({ templates }: { templates: SurveyTemplate[] 
           <Input name="code" placeholder="kode-template" required />
           <Input name="name" placeholder="Nama template" required />
           <Textarea name="description" placeholder="Deskripsi" />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Denominator</Label>
               <Input name="denominator" type="number" defaultValue={100} required />
@@ -29,7 +29,7 @@ export function TemplateManagement({ templates }: { templates: SurveyTemplate[] 
               <Input name="passingScore" type="number" defaultValue={80} required />
             </div>
           </div>
-          <select name="status" className="h-11 w-full rounded-xl border border-slate-200 px-3">
+          <select name="status" className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white/95 px-3.5 text-sm outline-none transition hover:border-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100">
             <option value="draft">Draft</option>
             <option value="active">Active</option>
             <option value="archived">Archived</option>
@@ -39,7 +39,7 @@ export function TemplateManagement({ templates }: { templates: SurveyTemplate[] 
       </Card>
       <div className="grid gap-4 md:grid-cols-2">
         {templates.map((template) => (
-          <Card key={template.id}>
+          <Card key={template.id} className="hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-900/10">
             <CardHeader>
               <CardTitle>{template.name}</CardTitle>
               <CardDescription>{template.description}</CardDescription>
