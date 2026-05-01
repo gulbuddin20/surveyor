@@ -14,7 +14,7 @@ export default async function NewSurveyPage({
     <div className="space-y-6">
       <div>
         <p className="text-sm font-semibold text-emerald-700">Input survei</p>
-        <h1 className="text-3xl font-bold text-slate-950">{template.name}</h1>
+        <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{template.name}</h1>
         <p className="mt-1 max-w-2xl text-slate-500">{template.description}</p>
       </div>
       <SurveyForm template={template} />
