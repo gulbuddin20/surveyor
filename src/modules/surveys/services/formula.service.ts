@@ -15,8 +15,8 @@ export function calculateSurveyScore(
   const totalNonconformity = questions.reduce((total, question) => {
     return selected.has(question.id) ? total + Number(question.weight) : total;
   }, 0);
-  const denominator = Number(formula?.denominator || 100);
-  const passingScore = Number(formula?.passing_score || 80);
+  const denominator = Number(formula?.denominator ?? 100);
+  const passingScore = Number(formula?.passing_score ?? 80);
   const score = Math.max(0, 100 - (totalNonconformity / denominator) * 100);
 
   return {

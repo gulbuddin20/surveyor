@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Camera, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,9 +16,14 @@ import { useSurveyWizardStore } from "@/stores/survey-wizard.store";
 export function SurveyForm({ template }: { template: TemplateDetail }) {
   const selectedQuestionIds = useSurveyWizardStore((state) => state.selectedQuestionIds);
   const toggleQuestion = useSurveyWizardStore((state) => state.toggleQuestion);
+  const reset = useSurveyWizardStore((state) => state.reset);
   const questions = useMemo(() => template.sections.flatMap((section) => section.questions), [template]);
   const result = calculateSurveyScore(questions, selectedQuestionIds, template.formula);
   const progress = questions.length ? (selectedQuestionIds.length / questions.length) * 100 : 0;
+
+  useEffect(() => {
+    reset();
+  }, [reset, template.id]);
 
   return (
     <form action={submitSurveyAction} className="grid gap-6 lg:grid-cols-[1fr_360px]">
