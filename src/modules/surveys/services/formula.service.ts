@@ -1,5 +1,11 @@
 import type { FormulaRule, SurveyQuestion } from "@/lib/types";
 
+export type ScoreSettings = {
+  formula: FormulaRule | null;
+  templateDenominator: number;
+  templatePassingScore: number;
+};
+
 export type FormulaResult = {
   totalNonconformity: number;
   score: number;
@@ -9,14 +15,14 @@ export type FormulaResult = {
 export function calculateSurveyScore(
   questions: SurveyQuestion[],
   selectedQuestionIds: string[],
-  formula: FormulaRule | null,
+  settings: ScoreSettings,
 ): FormulaResult {
   const selected = new Set(selectedQuestionIds);
   const totalNonconformity = questions.reduce((total, question) => {
     return selected.has(question.id) ? total + Number(question.weight) : total;
   }, 0);
-  const denominator = Number(formula?.denominator ?? 100);
-  const passingScore = Number(formula?.passing_score ?? 80);
+  const denominator = Number(settings.formula?.denominator ?? settings.templateDenominator);
+  const passingScore = Number(settings.formula?.passing_score ?? settings.templatePassingScore);
   const score = Math.max(0, 100 - (totalNonconformity / denominator) * 100);
 
   return {
