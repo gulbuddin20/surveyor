@@ -15,11 +15,11 @@ export function FormulaManagement({
   formulas: FormulaRow[];
 }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid gap-4 xl:grid-cols-2">
       {templates.map((template) => {
         const formula = formulas.find((item) => item.template_id === template.id);
         return (
-          <Card key={template.id}>
+          <Card key={template.id} className="hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-900/10">
             <CardHeader>
               <CardTitle>{template.name}</CardTitle>
               <CardDescription>Atur denominator dan ambang lulus.</CardDescription>
@@ -33,7 +33,7 @@ export function FormulaManagement({
                   defaultValue={formula?.expression ?? "100 - ((total_nonconformity / denominator) * 100)"}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Denominator</Label>
                   <Input name="denominator" type="number" defaultValue={formula?.denominator ?? template.denominator} />

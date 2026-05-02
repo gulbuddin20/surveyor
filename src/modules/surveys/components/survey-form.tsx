@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Camera, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,12 +16,17 @@ import { useSurveyWizardStore } from "@/stores/survey-wizard.store";
 export function SurveyForm({ template }: { template: TemplateDetail }) {
   const selectedQuestionIds = useSurveyWizardStore((state) => state.selectedQuestionIds);
   const toggleQuestion = useSurveyWizardStore((state) => state.toggleQuestion);
+  const reset = useSurveyWizardStore((state) => state.reset);
   const questions = useMemo(() => flattenQuestions(template.sections), [template]);
   const result = calculateSurveyScore(questions, selectedQuestionIds, template.formula);
   const progress = questions.length ? (selectedQuestionIds.length / questions.length) * 100 : 0;
 
+  useEffect(() => {
+    reset();
+  }, [reset, template.id]);
+
   return (
-    <form action={submitSurveyAction} className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <form action={submitSurveyAction} className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
       <input type="hidden" name="templateId" value={template.id} />
       {selectedQuestionIds.map((questionId) => (
         <input key={questionId} type="hidden" name="nonconformities" value={questionId} />
@@ -76,7 +81,7 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
           </div>
         </Card>
       </div>
-      <aside className="lg:sticky lg:top-24 lg:h-fit">
+      <aside className="xl:sticky xl:top-24 xl:h-fit">
         <Card>
           <CardHeader>
             <CardTitle>Hasil sementara</CardTitle>

@@ -13,10 +13,19 @@ import type {
 
 function buildSectionTree(sections: SurveySection[], questions: SurveyQuestion[]): SectionWithQuestions[] {
   const byId = new Map<string, SectionWithQuestions>();
+  const questionsBySectionId = new Map<string, SurveyQuestion[]>();
+
+  questions.forEach((question) => {
+    if (!question.section_id) return;
+    const sectionQuestions = questionsBySectionId.get(question.section_id) ?? [];
+    sectionQuestions.push(question);
+    questionsBySectionId.set(question.section_id, sectionQuestions);
+  });
+
   sections.forEach((section) => {
     byId.set(section.id, {
       ...section,
-      questions: questions.filter((question) => question.section_id === section.id),
+      questions: questionsBySectionId.get(section.id) ?? [],
       children: [],
     });
   });
@@ -157,6 +166,18 @@ export async function getTemplateAdminDetail(templateId: string): Promise<Templa
 
 export async function upsertSection(input: SectionInput) {
   const supabase = await createSupabaseServerClient();
+  if (input.sectionId && input.parentId) {
+    const { data: parent, error: parentError } = await supabase
+      .schema("surveyor")
+      .from("survey_sections")
+      .select("id")
+      .eq("id", input.parentId)
+      .eq("template_id", input.templateId)
+      .maybeSingle();
+    if (parentError) throw parentError;
+    if (!parent) throw new Error("Bagian induk tidak valid");
+  }
+
   const payload = {
     template_id: input.templateId,
     parent_id: input.parentId ?? null,
@@ -165,7 +186,7 @@ export async function upsertSection(input: SectionInput) {
     is_active: input.isActive,
   };
   const query = input.sectionId
-    ? supabase.schema("surveyor").from("survey_sections").update(payload).eq("id", input.sectionId)
+    ? supabase.schema("surveyor").from("survey_sections").update(payload).eq("id", input.sectionId).eq("template_id", input.templateId)
     : supabase.schema("surveyor").from("survey_sections").insert(payload);
   const { error } = await query;
   if (error) throw error;
@@ -179,6 +200,18 @@ export async function deleteSection(sectionId: string) {
 
 export async function upsertQuestion(input: QuestionInput) {
   const supabase = await createSupabaseServerClient();
+  if (input.sectionId) {
+    const { data: section, error: sectionError } = await supabase
+      .schema("surveyor")
+      .from("survey_sections")
+      .select("id")
+      .eq("id", input.sectionId)
+      .eq("template_id", input.templateId)
+      .maybeSingle();
+    if (sectionError) throw sectionError;
+    if (!section) throw new Error("Bagian pertanyaan tidak valid");
+  }
+
   const payload = {
     template_id: input.templateId,
     section_id: input.sectionId ?? null,
@@ -191,7 +224,7 @@ export async function upsertQuestion(input: QuestionInput) {
     sort_order: input.sortOrder,
   };
   const query = input.questionId
-    ? supabase.schema("surveyor").from("survey_questions").update(payload).eq("id", input.questionId)
+    ? supabase.schema("surveyor").from("survey_questions").update(payload).eq("id", input.questionId).eq("template_id", input.templateId)
     : supabase.schema("surveyor").from("survey_questions").insert(payload);
   const { error } = await query;
   if (error) throw error;

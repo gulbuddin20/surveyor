@@ -23,7 +23,7 @@ const features = [
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-slate-100">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#bbf7d0_0,#f8fafc_34rem)]">
       <section className="mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-4 py-16">
         <div className="max-w-3xl">
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-emerald-700">

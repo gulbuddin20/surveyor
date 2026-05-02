@@ -74,10 +74,16 @@ export async function updateFormulaFromForm(formData: FormData) {
 }
 
 export async function saveSectionFromForm(formData: FormData) {
+  const sectionId = formData.get("sectionId") || undefined;
+  const parentId = formData.get("parentId") || undefined;
+  if (sectionId && parentId && sectionId === parentId) {
+    return { ok: false, message: "Bagian tidak boleh menjadi induk untuk dirinya sendiri" };
+  }
+
   const parsed = sectionSchema.safeParse({
     templateId: formData.get("templateId"),
-    sectionId: formData.get("sectionId") || undefined,
-    parentId: formData.get("parentId") || undefined,
+    sectionId,
+    parentId,
     title: formData.get("title"),
     sortOrder: formData.get("sortOrder"),
     isActive: formData.get("isActive") === "on",

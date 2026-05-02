@@ -13,10 +13,19 @@ import type {
 
 function buildSectionTree(sections: SurveySection[], questions: SurveyQuestion[]): SectionWithQuestions[] {
   const byId = new Map<string, SectionWithQuestions>();
+  const questionsBySectionId = new Map<string, SurveyQuestion[]>();
+
+  questions.forEach((question) => {
+    if (!question.section_id) return;
+    const sectionQuestions = questionsBySectionId.get(question.section_id) ?? [];
+    sectionQuestions.push(question);
+    questionsBySectionId.set(question.section_id, sectionQuestions);
+  });
+
   sections.forEach((section) => {
     byId.set(section.id, {
       ...section,
-      questions: questions.filter((question) => question.section_id === section.id),
+      questions: questionsBySectionId.get(section.id) ?? [],
       children: [],
     });
   });
@@ -33,7 +42,10 @@ function buildSectionTree(sections: SurveySection[], questions: SurveyQuestion[]
 
   const sortTree = (items: SectionWithQuestions[]) => {
     items.sort((left, right) => left.sort_order - right.sort_order || left.title.localeCompare(right.title));
-    items.forEach((item) => sortTree(item.children));
+    items.forEach((item) => {
+      item.questions.sort((left, right) => left.sort_order - right.sort_order || left.label.localeCompare(right.label));
+      sortTree(item.children);
+    });
   };
   sortTree(roots);
   return roots;
@@ -73,7 +85,11 @@ export async function getTemplateDetail(templateId: string): Promise<TemplateDet
   if (error) throw error;
   if (!template) return null;
 
-  const [{ data: sections }, { data: questions }, { data: formula }] = await Promise.all([
+  const [
+    { data: sections, error: sectionError },
+    { data: questions, error: questionError },
+    { data: formula, error: formulaError },
+  ] = await Promise.all([
     supabase
       .schema("surveyor")
       .from("survey_sections")
@@ -96,6 +112,9 @@ export async function getTemplateDetail(templateId: string): Promise<TemplateDet
       .eq("is_active", true)
       .maybeSingle(),
   ]);
+  if (sectionError) throw sectionError;
+  if (questionError) throw questionError;
+  if (formulaError) throw formulaError;
 
   const questionRows = (questions ?? []) as SurveyQuestion[];
 
