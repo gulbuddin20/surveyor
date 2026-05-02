@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   FormulaRule,
   MsmeSubject,
+  SectionWithQuestions,
   SurveyAnswer,
   SurveyQuestion,
   SurveyResponse,
@@ -9,6 +10,34 @@ import type {
   SurveyTemplate,
   TemplateDetail,
 } from "@/lib/types";
+
+function buildSectionTree(sections: SurveySection[], questions: SurveyQuestion[]): SectionWithQuestions[] {
+  const byId = new Map<string, SectionWithQuestions>();
+  sections.forEach((section) => {
+    byId.set(section.id, {
+      ...section,
+      questions: questions.filter((question) => question.section_id === section.id),
+      children: [],
+    });
+  });
+
+  const roots: SectionWithQuestions[] = [];
+  byId.forEach((section) => {
+    if (section.parent_id && byId.has(section.parent_id)) {
+      const parent = byId.get(section.parent_id);
+      if (parent) parent.children.push(section);
+    } else {
+      roots.push(section);
+    }
+  });
+
+  const sortTree = (items: SectionWithQuestions[]) => {
+    items.sort((left, right) => left.sort_order - right.sort_order || left.title.localeCompare(right.title));
+    items.forEach((item) => sortTree(item.children));
+  };
+  sortTree(roots);
+  return roots;
+}
 
 export async function listActiveTemplates(): Promise<SurveyTemplate[]> {
   const supabase = await createSupabaseServerClient();
@@ -50,6 +79,7 @@ export async function getTemplateDetail(templateId: string): Promise<TemplateDet
       .from("survey_sections")
       .select("*")
       .eq("template_id", templateId)
+      .eq("is_active", true)
       .order("sort_order"),
     supabase
       .schema("surveyor")
@@ -68,15 +98,11 @@ export async function getTemplateDetail(templateId: string): Promise<TemplateDet
   ]);
 
   const questionRows = (questions ?? []) as SurveyQuestion[];
-  const sectionRows = ((sections ?? []) as SurveySection[]).map((section) => ({
-    ...section,
-    questions: questionRows.filter((question) => question.section_id === section.id),
-  }));
 
   return {
     ...(template as SurveyTemplate),
     formula: (formula as FormulaRule | null) ?? null,
-    sections: sectionRows,
+    sections: buildSectionTree((sections ?? []) as SurveySection[], questionRows),
   };
 }
 

@@ -1,5 +1,5 @@
 import { surveySubmissionSchema } from "@/lib/schemas";
-import type { Profile, SurveyQuestion } from "@/lib/types";
+import type { Profile, SectionWithQuestions, SurveyQuestion } from "@/lib/types";
 import {
   createAnswers,
   createResponse,
@@ -38,7 +38,7 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
   const template = await getTemplateDetail(parsed.data.templateId);
   if (!template) return { ok: false, message: "Template tidak ditemukan" };
 
-  const questions = template.sections.flatMap((section) => section.questions);
+  const questions = flattenQuestions(template.sections);
   const score = calculateSurveyScore(questions, parsed.data.nonconformities, template.formula);
 
   const subject = await createSubject({
@@ -82,4 +82,11 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
   );
 
   return { ok: true, responseId: response.id };
+}
+
+function flattenQuestions(sections: SectionWithQuestions[]): SurveyQuestion[] {
+  return sections.flatMap((section) => [
+    ...section.questions,
+    ...flattenQuestions(section.children),
+  ]);
 }
