@@ -39,7 +39,11 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
   if (!template) return { ok: false, message: "Template tidak ditemukan" };
 
   const questions = flattenQuestions(template.sections);
-  const score = calculateSurveyScore(questions, parsed.data.nonconformities, template.formula);
+  const score = calculateSurveyScore(questions, parsed.data.nonconformities, {
+    formula: template.formula,
+    templateDenominator: template.denominator,
+    templatePassingScore: template.passing_score,
+  });
 
   const subject = await createSubject({
     owner_id: profile.id,

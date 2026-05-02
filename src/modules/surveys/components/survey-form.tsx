@@ -18,7 +18,11 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
   const toggleQuestion = useSurveyWizardStore((state) => state.toggleQuestion);
   const reset = useSurveyWizardStore((state) => state.reset);
   const questions = useMemo(() => flattenQuestions(template.sections), [template]);
-  const result = calculateSurveyScore(questions, selectedQuestionIds, template.formula);
+  const result = calculateSurveyScore(questions, selectedQuestionIds, {
+    formula: template.formula,
+    templateDenominator: template.denominator,
+    templatePassingScore: template.passing_score,
+  });
   const progress = questions.length ? (selectedQuestionIds.length / questions.length) * 100 : 0;
 
   useEffect(() => {
