@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { ClipboardList, FileText, LayoutDashboard, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, Users } from "lucide-react";
+import { ClipboardList, FileText, LayoutDashboard, Menu, PanelLeftClose, PanelLeftOpen, Settings, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Profile } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -79,7 +79,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
           })}
         </nav>
 
-        <div className="space-y-3 border-t border-slate-100 pt-4">
+        <div className="border-t border-slate-100 pt-4">
           <label
             htmlFor="desktop-sidebar"
             className="hidden min-h-11 cursor-pointer items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 md:flex md:group-has-[[data-sidebar='collapsed']:checked]/shell:justify-center md:group-has-[[data-sidebar='collapsed']:checked]/shell:px-0"
@@ -89,16 +89,6 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
             <PanelLeftOpen className="hidden h-5 w-5 md:group-has-[[data-sidebar='collapsed']:checked]/shell:block" />
             <span className="md:group-has-[[data-sidebar='collapsed']:checked]/shell:hidden">Collapse</span>
           </label>
-          <form action={logoutAction}>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="min-h-11 w-full justify-start rounded-2xl text-slate-600 md:group-has-[[data-sidebar='collapsed']:checked]/shell:justify-center md:group-has-[[data-sidebar='collapsed']:checked]/shell:px-0"
-            >
-              <LogOut className="h-5 w-5" />
-              <span className="md:group-has-[[data-sidebar='collapsed']:checked]/shell:hidden">Keluar</span>
-            </Button>
-          </form>
         </div>
       </aside>
 
@@ -118,9 +108,16 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
                 <p className="truncate font-semibold text-slate-950">{profile.full_name}</p>
               </div>
             </div>
-            <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
-              {profile.role === "super_admin" ? "Super Admin" : "Surveyor"}
-            </span>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="hidden rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100 sm:inline-flex">
+                {profile.role === "super_admin" ? "Super Admin" : "Surveyor"}
+              </span>
+              <form action={logoutAction}>
+                <Button variant="outline" size="sm" className="rounded-full px-4">
+                  Keluar
+                </Button>
+              </form>
+            </div>
           </div>
         </header>
         <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 md:py-8 lg:px-8">{children}</div>

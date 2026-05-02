@@ -37,8 +37,10 @@ export type SurveyTemplate = {
 export type SurveySection = {
   id: string;
   template_id: string;
+  parent_id: string | null;
   title: string;
   sort_order: number;
+  is_active: boolean;
 };
 
 export type SurveyQuestion = {
@@ -113,7 +115,17 @@ export type SurveyPhoto = {
 
 export type TemplateDetail = SurveyTemplate & {
   formula: FormulaRule | null;
-  sections: Array<SurveySection & { questions: SurveyQuestion[] }>;
+  sections: SectionWithQuestions[];
+};
+
+export type SectionWithQuestions = SurveySection & {
+  questions: SurveyQuestion[];
+  children: SectionWithQuestions[];
+};
+
+export type TemplateAdminDetail = SurveyTemplate & {
+  sections: SectionWithQuestions[];
+  flatSections: SurveySection[];
 };
 
 export type DashboardStats = {

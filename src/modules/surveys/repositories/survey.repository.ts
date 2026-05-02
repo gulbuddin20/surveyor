@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   FormulaRule,
   MsmeSubject,
+  SectionWithQuestions,
   SurveyAnswer,
   SurveyQuestion,
   SurveyResponse,
@@ -9,6 +10,46 @@ import type {
   SurveyTemplate,
   TemplateDetail,
 } from "@/lib/types";
+
+function buildSectionTree(sections: SurveySection[], questions: SurveyQuestion[]): SectionWithQuestions[] {
+  const byId = new Map<string, SectionWithQuestions>();
+  const questionsBySectionId = new Map<string, SurveyQuestion[]>();
+
+  questions.forEach((question) => {
+    if (!question.section_id) return;
+    const sectionQuestions = questionsBySectionId.get(question.section_id) ?? [];
+    sectionQuestions.push(question);
+    questionsBySectionId.set(question.section_id, sectionQuestions);
+  });
+
+  sections.forEach((section) => {
+    byId.set(section.id, {
+      ...section,
+      questions: questionsBySectionId.get(section.id) ?? [],
+      children: [],
+    });
+  });
+
+  const roots: SectionWithQuestions[] = [];
+  byId.forEach((section) => {
+    if (section.parent_id && byId.has(section.parent_id)) {
+      const parent = byId.get(section.parent_id);
+      if (parent) parent.children.push(section);
+    } else {
+      roots.push(section);
+    }
+  });
+
+  const sortTree = (items: SectionWithQuestions[]) => {
+    items.sort((left, right) => left.sort_order - right.sort_order || left.title.localeCompare(right.title));
+    items.forEach((item) => {
+      item.questions.sort((left, right) => left.sort_order - right.sort_order || left.label.localeCompare(right.label));
+      sortTree(item.children);
+    });
+  };
+  sortTree(roots);
+  return roots;
+}
 
 export async function listActiveTemplates(): Promise<SurveyTemplate[]> {
   const supabase = await createSupabaseServerClient();
@@ -44,12 +85,17 @@ export async function getTemplateDetail(templateId: string): Promise<TemplateDet
   if (error) throw error;
   if (!template) return null;
 
-  const [{ data: sections }, { data: questions }, { data: formula }] = await Promise.all([
+  const [
+    { data: sections, error: sectionError },
+    { data: questions, error: questionError },
+    { data: formula, error: formulaError },
+  ] = await Promise.all([
     supabase
       .schema("surveyor")
       .from("survey_sections")
       .select("*")
       .eq("template_id", templateId)
+      .eq("is_active", true)
       .order("sort_order"),
     supabase
       .schema("surveyor")
@@ -66,17 +112,16 @@ export async function getTemplateDetail(templateId: string): Promise<TemplateDet
       .eq("is_active", true)
       .maybeSingle(),
   ]);
+  if (sectionError) throw sectionError;
+  if (questionError) throw questionError;
+  if (formulaError) throw formulaError;
 
   const questionRows = (questions ?? []) as SurveyQuestion[];
-  const sectionRows = ((sections ?? []) as SurveySection[]).map((section) => ({
-    ...section,
-    questions: questionRows.filter((question) => question.section_id === section.id),
-  }));
 
   return {
     ...(template as SurveyTemplate),
     formula: (formula as FormulaRule | null) ?? null,
-    sections: sectionRows,
+    sections: buildSectionTree((sections ?? []) as SurveySection[], questionRows),
   };
 }
 

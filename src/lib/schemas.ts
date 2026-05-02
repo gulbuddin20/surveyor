@@ -22,6 +22,28 @@ export const templateSchema = z.object({
   status: z.enum(["draft", "active", "archived"]),
 });
 
+export const sectionSchema = z.object({
+  templateId: z.uuid(),
+  sectionId: z.uuid().optional(),
+  parentId: z.uuid().optional(),
+  title: z.string().min(2).max(240),
+  sortOrder: z.coerce.number().int().min(0).default(0),
+  isActive: z.coerce.boolean().default(true),
+});
+
+export const questionSchema = z.object({
+  templateId: z.uuid(),
+  questionId: z.uuid().optional(),
+  sectionId: z.uuid().optional(),
+  label: z.string().min(3).max(1200),
+  helpText: z.string().max(1200).optional(),
+  questionType: z.enum(["text", "textarea", "number", "select", "multiselect", "radio", "checkbox", "photo"]),
+  weight: z.coerce.number().min(0),
+  isRequired: z.coerce.boolean().default(false),
+  isActive: z.coerce.boolean().default(true),
+  sortOrder: z.coerce.number().int().min(0).default(0),
+});
+
 export const formulaSchema = z.object({
   templateId: z.uuid(),
   denominator: z.coerce.number().positive(),
@@ -48,5 +70,7 @@ export const surveySubmissionSchema = z.object({
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UserInput = z.infer<typeof userSchema>;
 export type TemplateInput = z.infer<typeof templateSchema>;
+export type SectionInput = z.infer<typeof sectionSchema>;
+export type QuestionInput = z.infer<typeof questionSchema>;
 export type FormulaInput = z.infer<typeof formulaSchema>;
 export type SurveySubmissionInput = z.infer<typeof surveySubmissionSchema>;
