@@ -343,6 +343,27 @@ export async function upsertQuestion(input: QuestionInput) {
 
 export async function deleteQuestion(questionId: string) {
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.schema("surveyor").from("survey_questions").delete().eq("id", questionId);
+  const { count, error: countError } = await supabase
+    .schema("surveyor")
+    .from("survey_answers")
+    .select("id", { count: "exact", head: true })
+    .eq("question_id", questionId);
+  if (countError) throw countError;
+
+  if (count && count > 0) {
+    const { error } = await supabase
+      .schema("surveyor")
+      .from("survey_questions")
+      .update({ is_active: false })
+      .eq("id", questionId);
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await supabase
+    .schema("surveyor")
+    .from("survey_questions")
+    .delete()
+    .eq("id", questionId);
   if (error) throw error;
 }
