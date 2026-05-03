@@ -4,43 +4,12 @@ import type { FormulaInput, QuestionInput, SectionInput, TemplateInput, UserInpu
 import type {
   FormulaRule,
   Profile,
-  SectionWithQuestions,
   SurveyQuestion,
   SurveySection,
   SurveyTemplate,
   TemplateAdminDetail,
 } from "@/lib/types";
-
-function buildSectionTree(sections: SurveySection[], questions: SurveyQuestion[]): SectionWithQuestions[] {
-  const byId = new Map<string, SectionWithQuestions>();
-  sections.forEach((section) => {
-    byId.set(section.id, {
-      ...section,
-      questions: questions.filter((question) => question.section_id === section.id),
-      children: [],
-    });
-  });
-
-  const roots: SectionWithQuestions[] = [];
-  byId.forEach((section) => {
-    if (section.parent_id && byId.has(section.parent_id)) {
-      const parent = byId.get(section.parent_id);
-      if (parent) parent.children.push(section);
-    } else {
-      roots.push(section);
-    }
-  });
-
-  const sortTree = (items: SectionWithQuestions[]) => {
-    items.sort((left, right) => left.sort_order - right.sort_order || left.title.localeCompare(right.title));
-    items.forEach((item) => {
-      item.questions.sort((left, right) => left.sort_order - right.sort_order || left.label.localeCompare(right.label));
-      sortTree(item.children);
-    });
-  };
-  sortTree(roots);
-  return roots;
-}
+import { buildSectionTree } from "@/modules/admin/services/template-tree.service";
 
 export async function listUsers(): Promise<Profile[]> {
   const supabase = await createSupabaseServerClient();

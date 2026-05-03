@@ -1,5 +1,5 @@
 import { surveySubmissionSchema } from "@/lib/schemas";
-import type { Profile, SectionWithQuestions, SurveyQuestion } from "@/lib/types";
+import type { Profile, SurveyQuestion } from "@/lib/types";
 import {
   createAnswers,
   createResponse,
@@ -7,7 +7,7 @@ import {
   getTemplateDetail,
   listActiveTemplates,
 } from "@/modules/surveys/repositories/survey.repository";
-import { calculateSurveyScore } from "@/modules/surveys/services/formula.service";
+import { calculateSurveyScore, flattenQuestions } from "@/modules/surveys/services/formula.service";
 
 export async function getSurveyStartData() {
   return { templates: await listActiveTemplates() };
@@ -82,11 +82,4 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
   );
 
   return { ok: true, responseId: response.id };
-}
-
-function flattenQuestions(sections: SectionWithQuestions[]): SurveyQuestion[] {
-  return sections.flatMap((section) => [
-    ...section.questions,
-    ...flattenQuestions(section.children),
-  ]);
 }

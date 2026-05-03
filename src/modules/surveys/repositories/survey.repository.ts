@@ -2,7 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   FormulaRule,
   MsmeSubject,
-  SectionWithQuestions,
+  ResponseStatus,
   SurveyAnswer,
   SurveyQuestion,
   SurveyResponse,
@@ -10,34 +10,15 @@ import type {
   SurveyTemplate,
   TemplateDetail,
 } from "@/lib/types";
+import { buildSectionTree } from "@/modules/admin/services/template-tree.service";
 
-function buildSectionTree(sections: SurveySection[], questions: SurveyQuestion[]): SectionWithQuestions[] {
-  const byId = new Map<string, SectionWithQuestions>();
-  sections.forEach((section) => {
-    byId.set(section.id, {
-      ...section,
-      questions: questions.filter((question) => question.section_id === section.id),
-      children: [],
-    });
-  });
-
-  const roots: SectionWithQuestions[] = [];
-  byId.forEach((section) => {
-    if (section.parent_id && byId.has(section.parent_id)) {
-      const parent = byId.get(section.parent_id);
-      if (parent) parent.children.push(section);
-    } else {
-      roots.push(section);
-    }
-  });
-
-  const sortTree = (items: SectionWithQuestions[]) => {
-    items.sort((left, right) => left.sort_order - right.sort_order || left.title.localeCompare(right.title));
-    items.forEach((item) => sortTree(item.children));
-  };
-  sortTree(roots);
-  return roots;
-}
+export type RecentSurveyResponse = Pick<
+  SurveyResponse,
+  "id" | "template_id" | "subject_id" | "surveyor_id" | "status" | "total_nonconformity" | "score" | "result_label" | "submitted_at" | "created_at"
+> & {
+  survey_templates?: { name?: string } | null;
+  msme_subjects?: { business_name?: string; address?: string | null } | null;
+};
 
 export async function listActiveTemplates(): Promise<SurveyTemplate[]> {
   const supabase = await createSupabaseServerClient();
@@ -142,16 +123,21 @@ export async function createAnswers(inputs: Array<Omit<SurveyAnswer, "id" | "cre
   return (data ?? []) as SurveyAnswer[];
 }
 
-export async function listResponsesForUser(userId: string, isAdmin: boolean) {
+export async function listResponsesForUser(userId: string, isAdmin: boolean): Promise<RecentSurveyResponse[]> {
   const supabase = await createSupabaseServerClient();
   let query = supabase
     .schema("surveyor")
     .from("survey_responses")
-    .select("*, survey_templates(name), msme_subjects(business_name, address)")
+    .select("id, template_id, subject_id, surveyor_id, status, total_nonconformity, score, result_label, submitted_at, created_at, survey_templates(name), msme_subjects(business_name, address)")
     .order("created_at", { ascending: false })
     .limit(20);
   if (!isAdmin) query = query.eq("surveyor_id", userId);
   const { data, error } = await query;
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map((row) => ({
+    ...row,
+    status: row.status as ResponseStatus,
+    survey_templates: Array.isArray(row.survey_templates) ? row.survey_templates[0] : row.survey_templates,
+    msme_subjects: Array.isArray(row.msme_subjects) ? row.msme_subjects[0] : row.msme_subjects,
+  })) as RecentSurveyResponse[];
 }

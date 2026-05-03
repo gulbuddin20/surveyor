@@ -13,6 +13,7 @@ import {
   saveQuestionAction,
   saveSectionAction,
 } from "@/modules/admin/controllers/admin.controller";
+import { countQuestions } from "@/modules/surveys/services/formula.service";
 
 const questionTypes: QuestionType[] = [
   "checkbox",
@@ -42,7 +43,7 @@ export function TemplateManagement({
         </p>
       </div>
       <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
-        <div className="space-y-4">
+        <div className="space-y-4 xl:sticky xl:top-24 xl:h-fit">
           <Card>
             <CardHeader>
               <CardTitle>Template baru</CardTitle>
@@ -207,7 +208,7 @@ function SectionForm({
   sections: SurveySection[];
 }) {
   return (
-    <form action={saveSectionAction} className="grid gap-3 rounded-2xl border border-slate-100 bg-white p-4 md:grid-cols-[1fr_160px_160px_auto]">
+    <form action={saveSectionAction} className="grid gap-3 rounded-2xl border border-slate-100 bg-white p-4 lg:grid-cols-[minmax(0,1fr)_160px_120px_auto]">
       <input type="hidden" name="templateId" value={templateId} />
       {section ? <input type="hidden" name="sectionId" value={section.id} /> : null}
       <div className="space-y-2">
@@ -222,18 +223,18 @@ function SectionForm({
           className="h-11 w-full rounded-xl border border-slate-200 px-3"
         >
           <option value="">Bagian utama</option>
-          {sections
-            .filter((item) => item.id !== section?.id)
-            .map((item) => (
-              <option key={item.id} value={item.id}>{item.title}</option>
-            ))}
+          {sections.map((item) => (
+            <option key={item.id} value={item.id} disabled={item.id === section?.id}>
+              {item.title}
+            </option>
+          ))}
         </select>
       </div>
       <div className="space-y-2">
         <Label>Urutan</Label>
         <Input name="sortOrder" type="number" defaultValue={section?.sort_order ?? 0} />
       </div>
-      <div className="flex items-end gap-2">
+      <div className="flex flex-wrap items-end gap-2">
         <label className="mb-3 flex items-center gap-2 text-sm">
           <input name="isActive" type="checkbox" defaultChecked={section?.is_active ?? true} /> Aktif
         </label>
@@ -290,7 +291,7 @@ function QuestionForm({
     <form action={saveQuestionAction} className="grid gap-3 rounded-2xl border border-slate-100 bg-white p-4">
       <input type="hidden" name="templateId" value={templateId} />
       {question ? <input type="hidden" name="questionId" value={question.id} /> : null}
-      <div className="grid gap-3 lg:grid-cols-[1fr_180px_120px_120px]">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_120px_120px]">
         <div className="space-y-2">
           <Label>Butir pertanyaan/kriteria</Label>
           <Textarea name="label" defaultValue={question?.label} required />
@@ -334,20 +335,16 @@ function QuestionForm({
           <Label>Urutan</Label>
           <Input name="sortOrder" type="number" defaultValue={question?.sort_order ?? 0} />
         </div>
-        <div className="flex items-end gap-3">
+        <div className="flex flex-wrap items-end gap-3">
           <label className="mb-3 flex items-center gap-2 text-sm">
             <input name="isRequired" type="checkbox" defaultChecked={question?.is_required ?? false} /> Wajib
           </label>
           <label className="mb-3 flex items-center gap-2 text-sm">
             <input name="isActive" type="checkbox" defaultChecked={question?.is_active ?? true} /> Aktif
           </label>
-          <Button type="submit">{question ? "Update" : "Tambah pertanyaan"}</Button>
+          <Button type="submit" className="w-full sm:w-auto">{question ? "Update" : "Tambah pertanyaan"}</Button>
         </div>
       </div>
     </form>
   );
-}
-
-function countQuestions(sections: SectionWithQuestions[]): number {
-  return sections.reduce((total, section) => total + section.questions.length + countQuestions(section.children), 0);
 }

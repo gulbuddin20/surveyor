@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import type { SectionWithQuestions, TemplateDetail } from "@/lib/types";
-import { calculateSurveyScore } from "@/modules/surveys/services/formula.service";
+import { calculateSurveyProgress, calculateSurveyScore, flattenQuestions } from "@/modules/surveys/services/formula.service";
 import { submitSurveyAction } from "@/modules/surveys/controllers/survey.controller";
 import { useSurveyWizardStore } from "@/stores/survey-wizard.store";
 
@@ -18,10 +18,10 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
   const toggleQuestion = useSurveyWizardStore((state) => state.toggleQuestion);
   const questions = useMemo(() => flattenQuestions(template.sections), [template]);
   const result = calculateSurveyScore(questions, selectedQuestionIds, template.formula);
-  const progress = questions.length ? (selectedQuestionIds.length / questions.length) * 100 : 0;
+  const progress = calculateSurveyProgress(questions.length, selectedQuestionIds);
 
   return (
-    <form action={submitSurveyAction} className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <form action={submitSurveyAction} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       <input type="hidden" name="templateId" value={template.id} />
       {selectedQuestionIds.map((questionId) => (
         <input key={questionId} type="hidden" name="nonconformities" value={questionId} />
@@ -76,7 +76,7 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
           </div>
         </Card>
       </div>
-      <aside className="lg:sticky lg:top-24 lg:h-fit">
+      <aside className="order-first lg:sticky lg:top-24 lg:order-none lg:h-fit">
         <Card>
           <CardHeader>
             <CardTitle>Hasil sementara</CardTitle>
@@ -190,11 +190,4 @@ function QuestionList({
       </label>
     );
   });
-}
-
-function flattenQuestions(sections: SectionWithQuestions[]): SectionWithQuestions["questions"] {
-  return sections.flatMap((section) => [
-    ...section.questions,
-    ...flattenQuestions(section.children),
-  ]);
 }
