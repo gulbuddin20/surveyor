@@ -32,7 +32,7 @@ export default async function SurveyResultPage({ params }: { params: Promise<{ i
           </div>
         </div>
         <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
-          <Button asChild><Link href={`/surveys/${id}/export`}>Export PDF</Link></Button>
+          <Button asChild><a href={`/surveys/${id}/export`}>Export PDF</a></Button>
           <Button asChild variant="outline"><Link href="/dashboard">Dashboard</Link></Button>
           <Button asChild variant="outline"><Link href="/surveys">Survei lagi</Link></Button>
         </div>

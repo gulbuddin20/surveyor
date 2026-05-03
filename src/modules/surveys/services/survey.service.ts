@@ -37,7 +37,7 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
   );
   const parsed = surveySubmissionSchema.safeParse({
     templateId: formData.get("templateId"),
-    businessName: identityValues.business_name,
+    businessName: identityValues.business_name || Object.values(identityValues).find((value) => value.trim()),
     ownerName: identityValues.owner_name,
     address: identityValues.address,
     phone: identityValues.phone,
@@ -53,6 +53,8 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
 
   const template = await getTemplateDetail(parsed.data.templateId);
   if (!template) return { ok: false, message: "Template tidak ditemukan" };
+  const businessName = parsed.data.businessName?.trim();
+  if (!businessName) return { ok: false, message: "Minimal satu field identitas wajib diisi" };
 
   for (const field of template.identityFields) {
     if (field.is_required && !parsed.data.identityValues[field.field_key]?.trim()) {
@@ -80,7 +82,7 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
 
   const subject = await createSubject({
     owner_id: profile.id,
-    business_name: parsed.data.businessName,
+    business_name: businessName,
     owner_name: parsed.data.ownerName ?? null,
     address: parsed.data.address ?? null,
     business_type: template.name,

@@ -82,7 +82,7 @@ export const templateSettingsSchema = z.object({
 
 export const surveySubmissionSchema = z.object({
   templateId: z.uuid(),
-  businessName: z.string().min(2).max(160),
+  businessName: z.string().max(160).optional(),
   ownerName: z.string().max(160).optional(),
   address: z.string().max(500).optional(),
   phone: z.string().max(40).optional(),

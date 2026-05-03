@@ -135,7 +135,56 @@ export async function createTemplate(input: TemplateInput): Promise<SurveyTempla
     .select("*")
     .single();
   if (error) throw error;
-  return data as SurveyTemplate;
+  const template = data as SurveyTemplate;
+  await createDefaultIdentityFields(template.id);
+  return template;
+}
+
+async function createDefaultIdentityFields(templateId: string) {
+  const supabase = await createSupabaseServerClient();
+  const defaults = [
+    {
+      template_id: templateId,
+      field_key: "business_name",
+      label: "Nama usaha",
+      field_type: "text",
+      placeholder: "Nama UMKM/TPP",
+      is_required: true,
+      sort_order: 10,
+    },
+    {
+      template_id: templateId,
+      field_key: "owner_name",
+      label: "Nama pengelola/pemilik/penanggung jawab",
+      field_type: "text",
+      placeholder: "Nama penanggung jawab",
+      is_required: false,
+      sort_order: 20,
+    },
+    {
+      template_id: templateId,
+      field_key: "address",
+      label: "Alamat",
+      field_type: "textarea",
+      placeholder: "Alamat lengkap lokasi usaha",
+      is_required: false,
+      sort_order: 30,
+    },
+    {
+      template_id: templateId,
+      field_key: "phone",
+      label: "Nomor handphone",
+      field_type: "text",
+      placeholder: "08xxxxxxxxxx",
+      is_required: false,
+      sort_order: 40,
+    },
+  ];
+  const { error } = await supabase
+    .schema("surveyor")
+    .from("template_identity_fields")
+    .insert(defaults);
+  if (error) throw error;
 }
 
 export async function getTemplateAdminDetail(templateId: string): Promise<TemplateAdminDetail | null> {
