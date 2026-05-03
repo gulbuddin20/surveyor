@@ -1,14 +1,26 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #020617;
+  --background: #f3ead7;
+  --foreground: #16251d;
+  --atlas-ink: #16251d;
+  --atlas-jungle: #123f31;
+  --atlas-canopy: #0f6b4f;
+  --atlas-moss: #79a84d;
+  --atlas-paper: #fff9ea;
+  --atlas-paper-soft: #fbf0d8;
+  --atlas-coral: #f26f4c;
+  --atlas-gold: #d99b35;
+  --atlas-lagoon: #1e8a91;
+  --atlas-line: rgba(22, 37, 29, 0.14);
+  --atlas-shadow: 0 24px 70px rgba(22, 37, 29, 0.14);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-jakarta);
+  --font-serif: var(--font-fraunces);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -21,6 +33,124 @@ html {
 }
 
 body {
-  background: var(--background);
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(242, 111, 76, 0.24), transparent 24rem),
+    radial-gradient(circle at 85% 0%, rgba(30, 138, 145, 0.22), transparent 28rem),
+    linear-gradient(135deg, #f6ecd6 0%, #f3ead7 38%, #e7d7b8 100%);
   color: var(--foreground);
+  font-feature-settings: "cv02", "cv03", "cv04", "ss01";
+}
+
+body::before {
+  pointer-events: none;
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    linear-gradient(rgba(22, 37, 29, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(22, 37, 29, 0.055) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent 72%);
+}
+
+body::after {
+  pointer-events: none;
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.42;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(22, 37, 29, 0.14) 0 1px, transparent 1px),
+    radial-gradient(circle at 80% 30%, rgba(22, 37, 29, 0.12) 0 1px, transparent 1px);
+  background-size: 13px 17px, 19px 23px;
+  mix-blend-mode: multiply;
+}
+
+::selection {
+  background: var(--atlas-coral);
+  color: var(--atlas-paper);
+}
+
+@keyframes atlas-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes atlas-drift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(8px, -10px, 0) rotate(1deg);
+  }
+}
+
+.atlas-reveal {
+  animation: atlas-reveal 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.atlas-heading {
+  font-family: var(--font-fraunces), serif;
+  letter-spacing: -0.045em;
+}
+
+.atlas-panel {
+  border: 1px solid rgba(22, 37, 29, 0.12);
+  background:
+    linear-gradient(135deg, rgba(255, 249, 234, 0.92), rgba(251, 240, 216, 0.82)),
+    radial-gradient(circle at top right, rgba(121, 168, 77, 0.18), transparent 20rem);
+  box-shadow: var(--atlas-shadow);
+  backdrop-filter: blur(18px);
+}
+
+.atlas-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(22, 37, 29, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 249, 234, 0.7);
+  padding: 0.35rem 0.7rem;
+  color: var(--atlas-canopy);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.atlas-select {
+  min-height: 2.75rem;
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid rgba(22, 37, 29, 0.16);
+  background: rgba(255, 249, 234, 0.78);
+  padding-inline: 0.875rem;
+  color: var(--atlas-ink);
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.atlas-select:hover {
+  border-color: rgba(22, 37, 29, 0.28);
+}
+
+.atlas-select:focus {
+  border-color: var(--atlas-coral);
+  background: var(--atlas-paper);
+  box-shadow: 0 0 0 4px rgba(242, 111, 76, 0.16);
+}
+
+.atlas-fieldset {
+  border: 1px solid rgba(22, 37, 29, 0.1);
+  background: rgba(255, 249, 234, 0.48);
 }

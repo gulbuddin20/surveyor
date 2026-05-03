@@ -28,7 +28,7 @@ export function QuestionForm({
   sectionId?: string;
 }) {
   return (
-    <form action={saveQuestionAction} className="grid gap-3 rounded-2xl border border-slate-100 bg-white p-4">
+    <form action={saveQuestionAction} className="atlas-fieldset grid gap-3 rounded-[1.5rem] p-4">
       <input type="hidden" name="templateId" value={templateId} />
       {question ? <input type="hidden" name="questionId" value={question.id} /> : null}
       <div className="grid gap-3 lg:grid-cols-[1fr_180px_120px_120px]">
@@ -41,7 +41,7 @@ export function QuestionForm({
           <select
             name="sectionId"
             defaultValue={question?.section_id ?? sectionId ?? ""}
-            className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white/95 px-3.5 text-sm outline-none transition hover:border-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="atlas-select"
           >
             <option value="">Tanpa bagian</option>
             {sections.map((section) => (
@@ -54,7 +54,7 @@ export function QuestionForm({
           <select
             name="questionType"
             defaultValue={question?.question_type ?? "checkbox"}
-            className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white/95 px-3.5 text-sm outline-none transition hover:border-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            className="atlas-select"
           >
             {questionTypes.map((type) => (
               <option key={type} value={type}>{type}</option>

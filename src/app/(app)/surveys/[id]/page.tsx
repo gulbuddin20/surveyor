@@ -10,25 +10,25 @@ export default async function SurveyResultPage({ params }: { params: Promise<{ i
   const { detail } = await loadSurveyResultController(id);
   const identityValues = detail.subject.metadata;
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
+    <div className="atlas-reveal mx-auto max-w-5xl space-y-5">
       <Card>
         <CardHeader>
           <CardTitle>Survei tersimpan</CardTitle>
           <CardDescription>ID response: {id}</CardDescription>
         </CardHeader>
         <div className="grid gap-4 md:grid-cols-4">
-          <div className="rounded-2xl bg-slate-50 p-4 md:col-span-2">
-            <p className="text-sm text-slate-500">Nama usaha</p>
-            <p className="font-semibold text-slate-950">{detail.subject.business_name}</p>
-            <p className="mt-1 text-sm text-slate-500">{detail.template.name}</p>
+          <div className="rounded-2xl bg-[color:rgba(22,37,29,0.06)] p-4 md:col-span-2">
+            <p className="text-sm font-bold text-[color:rgba(22,37,29,0.52)]">Nama usaha</p>
+            <p className="font-extrabold text-[var(--atlas-ink)]">{detail.subject.business_name}</p>
+            <p className="mt-1 text-sm text-[color:rgba(22,37,29,0.58)]">{detail.template.name}</p>
           </div>
-          <div className="rounded-2xl bg-emerald-50 p-4">
-            <p className="text-sm text-emerald-700">Skor</p>
-            <p className="text-3xl font-bold text-emerald-800">{formatNumber(Number(detail.response.score))}</p>
+          <div className="rounded-2xl bg-[color:rgba(121,168,77,0.16)] p-4">
+            <p className="text-sm font-bold text-[var(--atlas-canopy)]">Skor</p>
+            <p className="atlas-heading text-4xl font-black text-[var(--atlas-canopy)]">{formatNumber(Number(detail.response.score))}</p>
           </div>
-          <div className="rounded-2xl bg-slate-50 p-4">
-            <p className="text-sm text-slate-500">Ketidaksesuaian</p>
-            <p className="text-3xl font-bold text-slate-950">{formatNumber(Number(detail.response.total_nonconformity))}</p>
+          <div className="rounded-2xl bg-[color:rgba(242,111,76,0.12)] p-4">
+            <p className="text-sm font-bold text-[var(--atlas-coral)]">Ketidaksesuaian</p>
+            <p className="atlas-heading text-4xl font-black text-[var(--atlas-ink)]">{formatNumber(Number(detail.response.total_nonconformity))}</p>
           </div>
         </div>
         <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
@@ -44,9 +44,9 @@ export default async function SurveyResultPage({ params }: { params: Promise<{ i
         </CardHeader>
         <dl className="grid gap-3 md:grid-cols-2">
           {Object.entries(identityValues).map(([key, value]) => (
-            <div key={key} className="rounded-2xl bg-slate-50 p-3">
-              <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">{key.replaceAll("_", " ")}</dt>
-              <dd className="mt-1 text-sm text-slate-800">{String(value || "-")}</dd>
+            <div key={key} className="rounded-2xl bg-[color:rgba(255,249,234,0.52)] p-3">
+              <dt className="text-xs font-black uppercase tracking-wide text-[color:rgba(22,37,29,0.42)]">{key.replaceAll("_", " ")}</dt>
+              <dd className="mt-1 text-sm text-[var(--atlas-ink)]">{String(value || "-")}</dd>
             </div>
           ))}
         </dl>
@@ -61,21 +61,21 @@ export default async function SurveyResultPage({ params }: { params: Promise<{ i
           <CardDescription>Butir yang dicentang sebagai tidak memenuhi persyaratan.</CardDescription>
         </CardHeader>
         <div className="space-y-3">
-          {detail.answers.length === 0 ? <p className="text-sm text-slate-500">Tidak ada ketidaksesuaian dicatat.</p> : null}
+          {detail.answers.length === 0 ? <p className="text-sm text-[color:rgba(22,37,29,0.58)]">Tidak ada ketidaksesuaian dicatat.</p> : null}
           {detail.answers.map((answer) => (
-            <div key={answer.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+            <div key={answer.id} className="rounded-2xl border border-[color:rgba(22,37,29,0.1)] bg-[color:rgba(255,249,234,0.52)] p-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <p className="font-medium text-slate-900">{answer.survey_questions?.label ?? "Pertanyaan"}</p>
+                <p className="font-extrabold text-[var(--atlas-ink)]">{answer.survey_questions?.label ?? "Pertanyaan"}</p>
                 <Badge>Bobot {formatNumber(Number(answer.score))}</Badge>
               </div>
             </div>
           ))}
           <div className="grid gap-3 md:grid-cols-2">
             {detail.photos.map((photo) => (
-              <div key={photo.id} className="rounded-2xl border border-slate-100 bg-white p-3 text-sm text-slate-600">
-                <p className="font-semibold text-slate-950">{photo.file_name ?? "Foto bukti"}</p>
+              <div key={photo.id} className="rounded-2xl border border-[color:rgba(22,37,29,0.1)] bg-[var(--atlas-paper)] p-3 text-sm text-[color:rgba(22,37,29,0.62)]">
+                <p className="font-extrabold text-[var(--atlas-ink)]">{photo.file_name ?? "Foto bukti"}</p>
                 <p>{photo.caption ?? "Tanpa keterangan"}</p>
-                <p className="mt-1 text-xs text-slate-400">{photo.storage_path}</p>
+                <p className="mt-1 text-xs text-[color:rgba(22,37,29,0.4)]">{photo.storage_path}</p>
               </div>
             ))}
           </div>
@@ -87,9 +87,9 @@ export default async function SurveyResultPage({ params }: { params: Promise<{ i
 
 function NoteBlock({ title, value }: { title: string; value: string | null }) {
   return (
-    <div className="rounded-2xl bg-slate-50 p-4">
-      <p className="text-sm font-semibold text-slate-950">{title}</p>
-      <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">{value || "-"}</p>
+    <div className="rounded-2xl bg-[color:rgba(255,249,234,0.52)] p-4">
+      <p className="text-sm font-extrabold text-[var(--atlas-ink)]">{title}</p>
+      <p className="mt-2 whitespace-pre-wrap text-sm text-[color:rgba(22,37,29,0.62)]">{value || "-"}</p>
     </div>
   );
 }

@@ -13,7 +13,7 @@ export function IdentityFieldForm({
   field?: TemplateIdentityField;
 }) {
   return (
-    <form action={saveIdentityFieldAction} className="grid gap-3 rounded-2xl border border-slate-100 bg-white p-4 lg:grid-cols-12">
+    <form action={saveIdentityFieldAction} className="atlas-fieldset grid gap-3 rounded-[1.5rem] p-4 lg:grid-cols-12">
       <input type="hidden" name="templateId" value={templateId} />
       {field ? <input type="hidden" name="fieldId" value={field.id} /> : null}
       <div className="space-y-2 lg:col-span-3">
@@ -29,7 +29,7 @@ export function IdentityFieldForm({
         <select
           name="fieldType"
           defaultValue={field?.field_type ?? "text"}
-          className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white/95 px-3.5 text-sm outline-none transition hover:border-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+          className="atlas-select"
         >
           <option value="text">text</option>
           <option value="textarea">textarea</option>
@@ -55,11 +55,11 @@ export function IdentityFieldForm({
           placeholder="Satu opsi per baris, hanya untuk tipe select"
         />
       </div>
-      <label className="flex items-center gap-2 text-sm font-medium text-slate-700 lg:col-span-1 lg:pt-8">
+      <label className="flex items-center gap-2 text-sm font-extrabold text-[var(--atlas-ink)] lg:col-span-1 lg:pt-8">
         <input name="isRequired" type="checkbox" defaultChecked={field?.is_required ?? false} />
         Wajib
       </label>
-      <label className="flex items-center gap-2 text-sm font-medium text-slate-700 lg:col-span-1 lg:pt-8">
+      <label className="flex items-center gap-2 text-sm font-extrabold text-[var(--atlas-ink)] lg:col-span-1 lg:pt-8">
         <input name="isActive" type="checkbox" defaultChecked={field?.is_active ?? true} />
         Aktif
       </label>

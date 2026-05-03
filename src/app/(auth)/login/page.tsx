@@ -3,10 +3,12 @@ import { LoginForm } from "@/modules/auth/components/login-form";
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,#bbf7d0_0,#f8fafc_34rem)] px-4 py-10">
-      <Card className="w-full max-w-md shadow-xl shadow-slate-900/10">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+      <div className="absolute left-1/2 top-12 h-72 w-72 -translate-x-1/2 rounded-full bg-[var(--atlas-lagoon)]/20 blur-3xl" />
+      <Card className="atlas-reveal relative w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl">Surveyor IKL</CardTitle>
+          <p className="atlas-kicker w-fit">Field access</p>
+          <CardTitle className="mt-4 text-4xl">Surveyor IKL</CardTitle>
           <CardDescription>
             Masuk untuk mengelola dan mengisi inspeksi kesehatan lingkungan.
           </CardDescription>

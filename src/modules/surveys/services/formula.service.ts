@@ -1,4 +1,4 @@
-import type { FormulaRule, SurveyQuestion } from "@/lib/types";
+import type { FormulaRule, SectionWithQuestions, SurveyQuestion } from "@/lib/types";
 
 export type ScoreSettings = {
   formula: FormulaRule | null;
@@ -30,4 +30,19 @@ export function calculateSurveyScore(
     score: Number(score.toFixed(2)),
     resultLabel: score >= passingScore ? "Memenuhi syarat" : "Belum memenuhi syarat",
   };
+}
+
+export function flattenQuestions(sections: SectionWithQuestions[]): SurveyQuestion[] {
+  return sections.flatMap((section) => [
+    ...section.questions,
+    ...flattenQuestions(section.children),
+  ]);
+}
+
+export function countQuestions(sections: SectionWithQuestions[]): number {
+  return flattenQuestions(sections).length;
+}
+
+export function calculateSurveyProgress(totalQuestions: number, selectedQuestionIds: string[]): number {
+  return totalQuestions ? (selectedQuestionIds.length / totalQuestions) * 100 : 0;
 }

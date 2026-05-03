@@ -4,20 +4,25 @@ import type * as React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl text-sm font-extrabold tracking-[-0.01em] transition duration-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[color:rgba(242,111,76,0.22)] disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "bg-emerald-600 text-white shadow-sm shadow-emerald-900/10 hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-md hover:shadow-emerald-900/15",
-        secondary: "bg-slate-100 text-slate-900 hover:bg-slate-200",
-        outline: "border border-slate-200 bg-white text-slate-800 shadow-sm hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700",
-        ghost: "text-slate-700 hover:bg-slate-100 hover:text-slate-950",
-        destructive: "bg-red-600 text-white shadow-sm hover:bg-red-700",
+        default:
+          "bg-[var(--atlas-jungle)] text-[var(--atlas-paper)] shadow-[0_14px_32px_rgba(18,63,49,0.25)] hover:-translate-y-0.5 hover:bg-[var(--atlas-canopy)]",
+        secondary:
+          "bg-[color:rgba(121,168,77,0.16)] text-[var(--atlas-jungle)] hover:-translate-y-0.5 hover:bg-[color:rgba(121,168,77,0.24)]",
+        outline:
+          "border border-[color:rgba(22,37,29,0.18)] bg-[color:rgba(255,249,234,0.7)] text-[var(--atlas-ink)] hover:-translate-y-0.5 hover:border-[var(--atlas-coral)] hover:bg-[var(--atlas-paper)]",
+        ghost:
+          "text-[var(--atlas-ink)] hover:bg-[color:rgba(22,37,29,0.07)]",
+        destructive:
+          "bg-[var(--atlas-coral)] text-white shadow-[0_14px_32px_rgba(242,111,76,0.24)] hover:-translate-y-0.5 hover:bg-[#d95433]",
       },
       size: {
-        sm: "min-h-10 px-3",
+        sm: "min-h-10 px-3.5",
         default: "px-4 py-2.5",
-        lg: "min-h-12 px-5",
+        lg: "min-h-13 px-6",
       },
     },
     defaultVariants: {

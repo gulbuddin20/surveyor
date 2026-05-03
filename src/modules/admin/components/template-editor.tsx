@@ -3,13 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { SectionWithQuestions, TemplateAdminDetail } from "@/lib/types";
+import type { TemplateAdminDetail } from "@/lib/types";
 import { IdentityFieldEditor } from "@/modules/admin/components/identity-field-editor";
 import { IdentityFieldForm } from "@/modules/admin/components/identity-field-form";
 import { QuestionForm } from "@/modules/admin/components/question-form";
 import { SectionEditor } from "@/modules/admin/components/section-editor";
 import { SectionForm } from "@/modules/admin/components/section-form";
 import { updateTemplateSettingsAction } from "@/modules/admin/controllers/admin.controller";
+import { countQuestions } from "@/modules/surveys/services/formula.service";
 
 export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
   return (
@@ -21,10 +22,10 @@ export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
         </CardHeader>
         <div className="flex flex-wrap gap-2">
           <Badge>{detail.status}</Badge>
-          <Badge className="bg-slate-100 text-slate-700">{detail.sections.length} bagian utama</Badge>
-          <Badge className="bg-slate-100 text-slate-700">{countQuestions(detail.sections)} pertanyaan</Badge>
-          <Badge className="bg-slate-100 text-slate-700">Denominator {Number(detail.denominator)}</Badge>
-          <Badge className="bg-slate-100 text-slate-700">Upload {Number(detail.photo_max_size_mb)} MB</Badge>
+          <Badge className="bg-[color:rgba(22,37,29,0.08)] text-[var(--atlas-ink)]">{detail.sections.length} bagian utama</Badge>
+          <Badge className="bg-[color:rgba(22,37,29,0.08)] text-[var(--atlas-ink)]">{countQuestions(detail.sections)} pertanyaan</Badge>
+          <Badge className="bg-[color:rgba(22,37,29,0.08)] text-[var(--atlas-ink)]">Denominator {Number(detail.denominator)}</Badge>
+          <Badge className="bg-[color:rgba(22,37,29,0.08)] text-[var(--atlas-ink)]">Upload {Number(detail.photo_max_size_mb)} MB</Badge>
         </div>
       </Card>
       <Card>
@@ -45,7 +46,7 @@ export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
         <IdentityFieldForm templateId={detail.id} />
         <div className="mt-4 space-y-3">
           {detail.identityFields.length === 0 ? (
-            <p className="text-sm text-slate-500">Belum ada field identitas khusus.</p>
+            <p className="text-sm text-[color:rgba(22,37,29,0.58)]">Belum ada field identitas khusus.</p>
           ) : null}
           {detail.identityFields.map((field) => (
             <IdentityFieldEditor key={field.id} templateId={detail.id} field={field} />
@@ -61,8 +62,4 @@ export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
       </div>
     </div>
   );
-}
-
-function countQuestions(sections: SectionWithQuestions[]): number {
-  return sections.reduce((total, section) => total + section.questions.length + countQuestions(section.children), 0);
 }

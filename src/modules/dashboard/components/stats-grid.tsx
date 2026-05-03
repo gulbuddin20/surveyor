@@ -17,14 +17,14 @@ export function StatsGrid({ stats }: { stats: DashboardStats }) {
       {cards.map((item) => {
         const Icon = item.icon;
         return (
-          <Card key={item.key} className="group p-4 hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-900/10">
+          <Card key={item.key} className="group p-4 hover:-translate-y-1">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-medium text-slate-500">{item.label}</p>
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-700 transition group-hover:bg-emerald-600 group-hover:text-white">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[color:rgba(22,37,29,0.52)]">{item.label}</p>
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[color:rgba(242,111,76,0.12)] text-[var(--atlas-coral)] transition group-hover:rotate-3 group-hover:scale-105">
                 <Icon className="h-5 w-5" />
               </span>
             </div>
-            <p className="mt-4 text-2xl font-black tracking-tight text-slate-950">
+            <p className="atlas-heading mt-5 text-4xl font-black text-[var(--atlas-ink)]">
               {formatNumber(Number(stats[item.key]))}
             </p>
           </Card>

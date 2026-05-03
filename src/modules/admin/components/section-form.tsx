@@ -14,7 +14,7 @@ export function SectionForm({
   sections: SurveySection[];
 }) {
   return (
-    <form action={saveSectionAction} className="grid gap-3 rounded-2xl border border-slate-100 bg-white p-4 md:grid-cols-[1fr_160px_160px_auto]">
+    <form action={saveSectionAction} className="atlas-fieldset grid gap-3 rounded-[1.5rem] p-4 md:grid-cols-[1fr_160px_160px_auto]">
       <input type="hidden" name="templateId" value={templateId} />
       {section ? <input type="hidden" name="sectionId" value={section.id} /> : null}
       <div className="space-y-2">
@@ -26,7 +26,7 @@ export function SectionForm({
         <select
           name="parentId"
           defaultValue={section?.parent_id ?? ""}
-          className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white/95 px-3.5 text-sm outline-none transition hover:border-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+          className="atlas-select"
         >
           <option value="">Bagian utama</option>
           {sections

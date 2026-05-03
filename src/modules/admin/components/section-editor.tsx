@@ -19,7 +19,7 @@ export function SectionEditor({
   depth?: number;
 }) {
   return (
-    <Card className={depth ? "border-slate-200 bg-slate-50/60" : undefined}>
+    <Card className={depth ? "bg-[color:rgba(255,249,234,0.64)]" : undefined}>
       <CardHeader>
         <div className="flex flex-col justify-between gap-3 lg:flex-row">
           <div>
@@ -28,7 +28,7 @@ export function SectionEditor({
               {section.questions.length} pertanyaan langsung · {section.children.length} subbagian
             </CardDescription>
           </div>
-          <Badge className={section.is_active ? undefined : "bg-slate-100 text-slate-700"}>
+          <Badge className={section.is_active ? undefined : "bg-[color:rgba(22,37,29,0.08)] text-[var(--atlas-ink)]"}>
             {section.is_active ? "Aktif" : "Nonaktif"}
           </Badge>
         </div>
@@ -46,7 +46,7 @@ export function SectionEditor({
           ))}
         </div>
         {section.children.length ? (
-          <div className="space-y-4 border-l-2 border-slate-200 pl-4">
+          <div className="space-y-4 border-l-2 border-[color:rgba(242,111,76,0.28)] pl-4">
             {section.children.map((child) => (
               <SectionEditor
                 key={child.id}
