@@ -7,7 +7,7 @@ import {
   getTemplateDetail,
   listActiveTemplates,
 } from "@/modules/surveys/repositories/survey.repository";
-import { calculateSurveyScore } from "@/modules/surveys/services/formula.service";
+import { calculateSurveyScore, flattenQuestions } from "@/modules/surveys/services/formula.service";
 
 export async function getSurveyStartData() {
   return { templates: await listActiveTemplates() };
@@ -38,7 +38,7 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
   const template = await getTemplateDetail(parsed.data.templateId);
   if (!template) return { ok: false, message: "Template tidak ditemukan" };
 
-  const questions = template.sections.flatMap((section) => section.questions);
+  const questions = flattenQuestions(template.sections);
   const score = calculateSurveyScore(questions, parsed.data.nonconformities, template.formula);
 
   const subject = await createSubject({

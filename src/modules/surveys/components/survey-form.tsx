@@ -8,20 +8,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
-import type { TemplateDetail } from "@/lib/types";
-import { calculateSurveyScore } from "@/modules/surveys/services/formula.service";
+import type { SectionWithQuestions, TemplateDetail } from "@/lib/types";
+import { calculateSurveyProgress, calculateSurveyScore, flattenQuestions } from "@/modules/surveys/services/formula.service";
 import { submitSurveyAction } from "@/modules/surveys/controllers/survey.controller";
 import { useSurveyWizardStore } from "@/stores/survey-wizard.store";
 
 export function SurveyForm({ template }: { template: TemplateDetail }) {
   const selectedQuestionIds = useSurveyWizardStore((state) => state.selectedQuestionIds);
   const toggleQuestion = useSurveyWizardStore((state) => state.toggleQuestion);
-  const questions = useMemo(() => template.sections.flatMap((section) => section.questions), [template]);
+  const questions = useMemo(() => flattenQuestions(template.sections), [template]);
   const result = calculateSurveyScore(questions, selectedQuestionIds, template.formula);
-  const progress = questions.length ? (selectedQuestionIds.length / questions.length) * 100 : 0;
+  const progress = calculateSurveyProgress(questions.length, selectedQuestionIds);
 
   return (
-    <form action={submitSurveyAction} className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <form action={submitSurveyAction} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       <input type="hidden" name="templateId" value={template.id} />
       {selectedQuestionIds.map((questionId) => (
         <input key={questionId} type="hidden" name="nonconformities" value={questionId} />
@@ -52,38 +52,12 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
           </div>
         </Card>
         {template.sections.map((section) => (
-          <Card key={section.id}>
-            <CardHeader>
-              <CardTitle>{section.title}</CardTitle>
-              <CardDescription>
-                Centang hanya kriteria yang tidak terpenuhi. Jika memenuhi syarat, lewati.
-              </CardDescription>
-            </CardHeader>
-            <div className="space-y-3">
-              {section.questions.map((question) => {
-                const checked = selectedQuestionIds.includes(question.id);
-                return (
-                  <label
-                    key={question.id}
-                    className="flex cursor-pointer gap-3 rounded-2xl border border-slate-200 p-4 transition hover:bg-slate-50"
-                  >
-                    <input
-                      checked={checked}
-                      onChange={() => toggleQuestion(question.id)}
-                      type="checkbox"
-                      className="mt-1 h-5 w-5 rounded border-slate-300 text-emerald-600"
-                    />
-                    <span className="flex-1">
-                      <span className="block font-medium text-slate-900">{question.label}</span>
-                      <span className="mt-1 inline-flex text-xs font-semibold text-amber-700">
-                        Nilai ketidaksesuaian: {Number(question.weight)}
-                      </span>
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          </Card>
+          <SurveySectionCard
+            key={section.id}
+            section={section}
+            selectedQuestionIds={selectedQuestionIds}
+            onToggleQuestion={toggleQuestion}
+          />
         ))}
         <Card>
           <CardHeader>
@@ -102,7 +76,7 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
           </div>
         </Card>
       </div>
-      <aside className="lg:sticky lg:top-24 lg:h-fit">
+      <aside className="order-first lg:sticky lg:top-24 lg:order-none lg:h-fit">
         <Card>
           <CardHeader>
             <CardTitle>Hasil sementara</CardTitle>
@@ -132,4 +106,88 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
       </aside>
     </form>
   );
+}
+
+function SurveySectionCard({
+  section,
+  selectedQuestionIds,
+  onToggleQuestion,
+}: {
+  section: SectionWithQuestions;
+  selectedQuestionIds: string[];
+  onToggleQuestion: (questionId: string) => void;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{section.title}</CardTitle>
+        <CardDescription>
+          Centang hanya kriteria yang tidak terpenuhi. Jika memenuhi syarat, lewati.
+        </CardDescription>
+      </CardHeader>
+      <div className="space-y-4">
+        <QuestionList
+          questions={section.questions}
+          selectedQuestionIds={selectedQuestionIds}
+          onToggleQuestion={onToggleQuestion}
+        />
+        {section.children.map((child) => (
+          <div key={child.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
+            <h3 className="font-semibold text-slate-950">{child.title}</h3>
+            <div className="mt-3 space-y-3">
+              <QuestionList
+                questions={child.questions}
+                selectedQuestionIds={selectedQuestionIds}
+                onToggleQuestion={onToggleQuestion}
+              />
+              {child.children.map((grandchild) => (
+                <SurveySectionCard
+                  key={grandchild.id}
+                  section={grandchild}
+                  selectedQuestionIds={selectedQuestionIds}
+                  onToggleQuestion={onToggleQuestion}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function QuestionList({
+  questions,
+  selectedQuestionIds,
+  onToggleQuestion,
+}: {
+  questions: SectionWithQuestions["questions"];
+  selectedQuestionIds: string[];
+  onToggleQuestion: (questionId: string) => void;
+}) {
+  return questions.map((question) => {
+    const checked = selectedQuestionIds.includes(question.id);
+    return (
+      <label
+        key={question.id}
+        className="flex cursor-pointer gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:bg-slate-50"
+      >
+        <input
+          checked={checked}
+          onChange={() => onToggleQuestion(question.id)}
+          type="checkbox"
+          className="mt-1 h-5 w-5 rounded border-slate-300 text-emerald-600"
+        />
+        <span className="flex-1">
+          <span className="block font-medium text-slate-900">{question.label}</span>
+          {question.help_text ? (
+            <span className="mt-1 block text-sm text-slate-500">{question.help_text}</span>
+          ) : null}
+          <span className="mt-1 inline-flex text-xs font-semibold text-amber-700">
+            Nilai ketidaksesuaian: {Number(question.weight)}
+          </span>
+        </span>
+      </label>
+    );
+  });
 }
