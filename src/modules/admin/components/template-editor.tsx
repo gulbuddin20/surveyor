@@ -3,13 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { SectionWithQuestions, TemplateAdminDetail } from "@/lib/types";
+import type { TemplateAdminDetail } from "@/lib/types";
 import { IdentityFieldEditor } from "@/modules/admin/components/identity-field-editor";
 import { IdentityFieldForm } from "@/modules/admin/components/identity-field-form";
 import { QuestionForm } from "@/modules/admin/components/question-form";
 import { SectionEditor } from "@/modules/admin/components/section-editor";
 import { SectionForm } from "@/modules/admin/components/section-form";
 import { updateTemplateSettingsAction } from "@/modules/admin/controllers/admin.controller";
+import { countQuestions } from "@/modules/surveys/services/formula.service";
 
 export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
   return (
@@ -61,8 +62,4 @@ export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
       </div>
     </div>
   );
-}
-
-function countQuestions(sections: SectionWithQuestions[]): number {
-  return sections.reduce((total, section) => total + section.questions.length + countQuestions(section.children), 0);
 }

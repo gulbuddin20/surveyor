@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import type { SectionWithQuestions, TemplateDetail } from "@/lib/types";
 import { IdentityFieldsCard } from "@/modules/surveys/components/identity-fields-card";
-import { calculateSurveyScore } from "@/modules/surveys/services/formula.service";
+import { calculateSurveyProgress, calculateSurveyScore, flattenQuestions } from "@/modules/surveys/services/formula.service";
 import { submitSurveyAction } from "@/modules/surveys/controllers/survey.controller";
 import { useSurveyWizardStore } from "@/stores/survey-wizard.store";
 
@@ -23,7 +23,7 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
     templateDenominator: template.denominator,
     templatePassingScore: template.passing_score,
   });
-  const progress = questions.length ? (selectedQuestionIds.length / questions.length) * 100 : 0;
+  const progress = calculateSurveyProgress(questions.length, selectedQuestionIds);
 
   useEffect(() => {
     reset();
@@ -198,11 +198,4 @@ function QuestionList({
       </label>
     );
   });
-}
-
-function flattenQuestions(sections: SectionWithQuestions[]): SectionWithQuestions["questions"] {
-  return sections.flatMap((section) => [
-    ...section.questions,
-    ...flattenQuestions(section.children),
-  ]);
 }
