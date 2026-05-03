@@ -40,7 +40,7 @@ function IdentityFieldControl({ field }: { field: TemplateIdentityField }) {
       {field.field_type === "select" ? (
         <select
           {...commonProps}
-          className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white/95 px-3.5 text-sm outline-none transition hover:border-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+          className="atlas-select"
         >
           <option value="">Pilih {field.label}</option>
           {field.options.map((option) => (

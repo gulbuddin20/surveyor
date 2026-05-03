@@ -9,11 +9,11 @@ export function TemplatePicker({ templates }: { templates: SurveyTemplate[] }) {
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {templates.map((template) => (
         <Link key={template.id} href={`/surveys/new?template=${template.id}`} className="block focus:outline-none">
-          <Card className="group h-full hover:-translate-y-1 hover:border-emerald-100 hover:shadow-lg hover:shadow-emerald-900/10">
+          <Card className="group h-full overflow-hidden hover:-translate-y-1">
             <CardHeader>
               <div className="flex items-start justify-between gap-3">
                 <CardTitle>{template.name}</CardTitle>
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-700 transition group-hover:bg-emerald-600 group-hover:text-white">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--atlas-jungle)] text-[var(--atlas-paper)] transition group-hover:rotate-[-6deg] group-hover:bg-[var(--atlas-coral)]">
                   <ArrowRight className="h-5 w-5" />
                 </span>
               </div>
@@ -21,7 +21,7 @@ export function TemplatePicker({ templates }: { templates: SurveyTemplate[] }) {
             </CardHeader>
             <div className="flex flex-wrap gap-2">
               <Badge>Denominator {Number(template.denominator)}</Badge>
-              <Badge className="bg-slate-100 text-slate-700">Lulus {Number(template.passing_score)}</Badge>
+              <Badge className="bg-[color:rgba(22,37,29,0.08)] text-[var(--atlas-ink)]">Lulus {Number(template.passing_score)}</Badge>
             </div>
           </Card>
         </Link>

@@ -15,11 +15,11 @@ export function FormulaManagement({
   formulas: FormulaRow[];
 }) {
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className="atlas-reveal grid gap-4 xl:grid-cols-2">
       {templates.map((template) => {
         const formula = formulas.find((item) => item.template_id === template.id);
         return (
-          <Card key={template.id} className="hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-900/10">
+          <Card key={template.id} className="hover:-translate-y-1">
             <CardHeader>
               <CardTitle>{template.name}</CardTitle>
               <CardDescription>Atur denominator dan ambang lulus.</CardDescription>

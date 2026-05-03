@@ -21,10 +21,10 @@ export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
         </CardHeader>
         <div className="flex flex-wrap gap-2">
           <Badge>{detail.status}</Badge>
-          <Badge className="bg-slate-100 text-slate-700">{detail.sections.length} bagian utama</Badge>
-          <Badge className="bg-slate-100 text-slate-700">{countQuestions(detail.sections)} pertanyaan</Badge>
-          <Badge className="bg-slate-100 text-slate-700">Denominator {Number(detail.denominator)}</Badge>
-          <Badge className="bg-slate-100 text-slate-700">Upload {Number(detail.photo_max_size_mb)} MB</Badge>
+          <Badge className="bg-[color:rgba(22,37,29,0.08)] text-[var(--atlas-ink)]">{detail.sections.length} bagian utama</Badge>
+          <Badge className="bg-[color:rgba(22,37,29,0.08)] text-[var(--atlas-ink)]">{countQuestions(detail.sections)} pertanyaan</Badge>
+          <Badge className="bg-[color:rgba(22,37,29,0.08)] text-[var(--atlas-ink)]">Denominator {Number(detail.denominator)}</Badge>
+          <Badge className="bg-[color:rgba(22,37,29,0.08)] text-[var(--atlas-ink)]">Upload {Number(detail.photo_max_size_mb)} MB</Badge>
         </div>
       </Card>
       <Card>
@@ -45,7 +45,7 @@ export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
         <IdentityFieldForm templateId={detail.id} />
         <div className="mt-4 space-y-3">
           {detail.identityFields.length === 0 ? (
-            <p className="text-sm text-slate-500">Belum ada field identitas khusus.</p>
+            <p className="text-sm text-[color:rgba(22,37,29,0.58)]">Belum ada field identitas khusus.</p>
           ) : null}
           {detail.identityFields.map((field) => (
             <IdentityFieldEditor key={field.id} templateId={detail.id} field={field} />

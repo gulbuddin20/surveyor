@@ -14,15 +14,15 @@ export function QuestionEditor({
   sections: SurveySection[];
 }) {
   return (
-    <div className="rounded-2xl border border-slate-100 bg-white p-4">
+    <div className="rounded-[1.5rem] border border-[color:rgba(22,37,29,0.1)] bg-[color:rgba(255,249,234,0.52)] p-4">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="font-semibold text-slate-950">{question.label}</p>
-          {question.help_text ? <p className="mt-1 text-sm text-slate-500">{question.help_text}</p> : null}
+          <p className="font-extrabold text-[var(--atlas-ink)]">{question.label}</p>
+          {question.help_text ? <p className="mt-1 text-sm text-[color:rgba(22,37,29,0.58)]">{question.help_text}</p> : null}
         </div>
         <div className="flex gap-2">
           <Badge>Bobot {Number(question.weight)}</Badge>
-          <Badge className={question.is_active ? undefined : "bg-slate-100 text-slate-700"}>
+          <Badge className={question.is_active ? undefined : "bg-[color:rgba(22,37,29,0.08)] text-[var(--atlas-ink)]"}>
             {question.is_active ? "Aktif" : "Nonaktif"}
           </Badge>
         </div>

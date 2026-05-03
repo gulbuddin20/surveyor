@@ -25,7 +25,7 @@ export function LoginForm() {
         <Input id="password" name="password" type="password" placeholder="••••••••" required />
       </div>
       {state.message ? (
-        <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{state.message}</p>
+        <p className="rounded-2xl border border-[color:rgba(242,111,76,0.24)] bg-[color:rgba(242,111,76,0.12)] px-3 py-2 text-sm font-semibold text-[#b84025]">{state.message}</p>
       ) : null}
       <Button className="w-full" disabled={pending} type="submit">
         {pending ? "Masuk..." : "Masuk"}

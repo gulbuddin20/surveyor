@@ -52,9 +52,9 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
               Upload foto bukti kunjungan. Maksimal {Number(template.photo_max_size_mb)} MB per file.
             </CardDescription>
           </CardHeader>
-          <label className="block cursor-pointer rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500 transition hover:border-emerald-300 hover:bg-emerald-50/50">
+          <label className="block cursor-pointer rounded-[1.5rem] border border-dashed border-[color:rgba(22,37,29,0.2)] bg-[color:rgba(255,249,234,0.38)] p-5 text-center text-sm text-[color:rgba(22,37,29,0.58)] transition hover:border-[var(--atlas-coral)] hover:bg-[var(--atlas-paper)]">
             <Camera className="mx-auto mb-2 h-6 w-6" />
-            <span className="block font-medium text-slate-700">Pilih foto bukti</span>
+            <span className="block font-extrabold text-[var(--atlas-ink)]">Pilih foto bukti</span>
             <span>JPG, PNG, atau WebP. Boleh lebih dari satu foto.</span>
             <input
               name="evidencePhotos"
@@ -93,16 +93,16 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
           <div className="space-y-4">
             <Progress value={progress} />
             <div className="grid grid-cols-2 gap-3 text-center">
-              <div className="rounded-2xl bg-slate-50 p-3">
-                <p className="text-xs text-slate-500">Ketidaksesuaian</p>
-                <p className="text-2xl font-bold">{result.totalNonconformity}</p>
+              <div className="rounded-2xl bg-[color:rgba(22,37,29,0.06)] p-3">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[color:rgba(22,37,29,0.52)]">Ketidaksesuaian</p>
+                <p className="atlas-heading text-3xl font-black">{result.totalNonconformity}</p>
               </div>
-              <div className="rounded-2xl bg-emerald-50 p-3">
-                <p className="text-xs text-emerald-700">Skor</p>
-                <p className="text-2xl font-bold text-emerald-700">{result.score}</p>
+              <div className="rounded-2xl bg-[color:rgba(121,168,77,0.16)] p-3">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[var(--atlas-canopy)]">Skor</p>
+                <p className="atlas-heading text-3xl font-black text-[var(--atlas-canopy)]">{result.score}</p>
               </div>
             </div>
-            <p className="rounded-2xl bg-slate-100 p-3 text-sm font-semibold text-slate-800">
+            <p className="rounded-2xl bg-[color:rgba(242,111,76,0.12)] p-3 text-sm font-extrabold text-[var(--atlas-ink)]">
               {result.resultLabel}
             </p>
             <Button className="w-full" type="submit">
@@ -140,8 +140,8 @@ function SurveySectionCard({
           onToggleQuestion={onToggleQuestion}
         />
         {section.children.map((child) => (
-          <div key={child.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
-            <h3 className="font-semibold text-slate-950">{child.title}</h3>
+          <div key={child.id} className="atlas-fieldset rounded-[1.5rem] p-4">
+            <h3 className="atlas-heading text-xl font-black text-[var(--atlas-ink)]">{child.title}</h3>
             <div className="mt-3 space-y-3">
               <QuestionList
                 questions={child.questions}
@@ -178,18 +178,18 @@ function QuestionList({
     return (
       <label
         key={question.id}
-        className="flex cursor-pointer gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:bg-slate-50"
+        className="flex cursor-pointer gap-3 rounded-[1.5rem] border border-[color:rgba(22,37,29,0.12)] bg-[color:rgba(255,249,234,0.56)] p-4 transition hover:-translate-y-0.5 hover:border-[var(--atlas-coral)] hover:bg-[var(--atlas-paper)]"
       >
         <input
           checked={checked}
           onChange={() => onToggleQuestion(question.id)}
           type="checkbox"
-          className="mt-1 h-5 w-5 rounded border-slate-300 text-emerald-600"
+          className="mt-1 h-5 w-5 rounded border-[color:rgba(22,37,29,0.24)] text-[var(--atlas-coral)]"
         />
         <span className="flex-1">
-          <span className="block font-medium text-slate-900">{question.label}</span>
+          <span className="block font-extrabold text-[var(--atlas-ink)]">{question.label}</span>
           {question.help_text ? (
-            <span className="mt-1 block text-sm text-slate-500">{question.help_text}</span>
+            <span className="mt-1 block text-sm text-[color:rgba(22,37,29,0.58)]">{question.help_text}</span>
           ) : null}
           <span className="mt-1 inline-flex text-xs font-semibold text-amber-700">
             Nilai ketidaksesuaian: {Number(question.weight)}

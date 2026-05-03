@@ -7,7 +7,7 @@ import { createUserAction } from "@/modules/admin/controllers/admin.controller";
 
 export function UserManagement({ users }: { users: Profile[] }) {
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_1fr]">
+    <div className="atlas-reveal grid gap-6 lg:grid-cols-[minmax(0,380px)_1fr]">
       <Card>
         <CardHeader>
           <CardTitle>Tambah user</CardTitle>
@@ -28,7 +28,7 @@ export function UserManagement({ users }: { users: Profile[] }) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="role">Role</Label>
-            <select id="role" name="role" className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white/95 px-3.5 text-sm outline-none transition hover:border-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100">
+            <select id="role" name="role" className="atlas-select">
               <option value="regular_user">Regular user</option>
               <option value="super_admin">Super admin</option>
             </select>
@@ -46,10 +46,10 @@ export function UserManagement({ users }: { users: Profile[] }) {
         </CardHeader>
         <div className="space-y-3">
           {users.map((user) => (
-            <div key={user.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 transition hover:border-emerald-100 hover:bg-emerald-50/40">
-              <p className="font-semibold text-slate-950">{user.full_name}</p>
-              <p className="break-all text-sm text-slate-500">{user.email}</p>
-              <p className="mt-2 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">{user.role}</p>
+            <div key={user.id} className="rounded-[1.5rem] border border-[color:rgba(22,37,29,0.1)] bg-[color:rgba(255,249,234,0.52)] p-4 transition hover:-translate-y-0.5 hover:bg-[var(--atlas-paper)]">
+              <p className="font-extrabold text-[var(--atlas-ink)]">{user.full_name}</p>
+              <p className="break-all text-sm text-[color:rgba(22,37,29,0.58)]">{user.email}</p>
+              <p className="mt-2 inline-flex rounded-full border border-[color:rgba(22,37,29,0.12)] bg-[color:rgba(255,249,234,0.68)] px-2.5 py-1 text-xs font-extrabold text-[var(--atlas-canopy)]">{user.role}</p>
             </div>
           ))}
         </div>

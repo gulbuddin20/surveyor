@@ -17,11 +17,11 @@ export function TemplateManagement({
   detail: TemplateAdminDetail | null;
 }) {
   return (
-    <div className="space-y-6">
+    <div className="atlas-reveal space-y-6">
       <div>
-        <p className="text-sm font-semibold text-emerald-700">Admin template</p>
-        <h1 className="text-3xl font-bold text-slate-950">Template, bagian, dan butir IKL</h1>
-        <p className="mt-1 max-w-3xl text-slate-500">
+        <p className="atlas-kicker">Admin template</p>
+        <h1 className="atlas-heading mt-4 text-4xl font-black text-[var(--atlas-ink)] sm:text-5xl">Template, bagian, dan butir IKL</h1>
+        <p className="mt-2 max-w-3xl text-[color:rgba(22,37,29,0.66)]">
           Kelola struktur bertingkat seperti formulir Food Truck: bagian, subbagian, pertanyaan, tipe input, dan bobot ketidaksesuaian.
         </p>
       </div>
@@ -50,7 +50,7 @@ export function TemplateManagement({
                 <Label>Max upload foto (MB)</Label>
                 <Input name="photoMaxSizeMb" type="number" min={1} max={25} defaultValue={10} required />
               </div>
-              <select name="status" className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white/95 px-3.5 text-sm outline-none transition hover:border-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100">
+              <select name="status" className="atlas-select">
                 <option value="draft">Draft</option>
                 <option value="active">Active</option>
                 <option value="archived">Archived</option>
@@ -80,14 +80,14 @@ function TemplateLink({ template, active }: { template: SurveyTemplate; active: 
   return (
     <Link
       href={`/admin/templates?template=${template.id}`}
-      className={`block rounded-2xl border p-3 transition ${
-        active ? "border-emerald-300 bg-emerald-50" : "border-slate-100 hover:bg-slate-50"
+      className={`block rounded-2xl border p-3 transition hover:-translate-y-0.5 ${
+        active ? "border-[var(--atlas-coral)] bg-[color:rgba(242,111,76,0.1)]" : "border-[color:rgba(22,37,29,0.1)] hover:bg-[var(--atlas-paper)]"
       }`}
     >
-      <p className="font-semibold text-slate-950">{template.name}</p>
+      <p className="font-extrabold text-[var(--atlas-ink)]">{template.name}</p>
       <div className="mt-2 flex flex-wrap gap-2">
         <Badge>{template.status}</Badge>
-        <Badge className="bg-slate-100 text-slate-700">/{Number(template.denominator)}</Badge>
+        <Badge className="bg-[color:rgba(22,37,29,0.08)] text-[var(--atlas-ink)]">/{Number(template.denominator)}</Badge>
       </div>
     </Link>
   );

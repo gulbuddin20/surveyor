@@ -11,11 +11,11 @@ export default async function NewSurveyPage({
   if (!params.template) redirect("/surveys");
   const { template } = await loadSurveyFormController(params.template);
   return (
-    <div className="space-y-6">
+    <div className="atlas-reveal space-y-6">
       <div>
-        <p className="text-sm font-semibold text-emerald-700">Input survei</p>
-        <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{template.name}</h1>
-        <p className="mt-1 max-w-2xl text-slate-500">{template.description}</p>
+        <p className="atlas-kicker">Input survei</p>
+        <h1 className="atlas-heading mt-4 text-4xl font-black tracking-tight text-[var(--atlas-ink)] sm:text-5xl">{template.name}</h1>
+        <p className="mt-2 max-w-3xl text-[color:rgba(22,37,29,0.66)]">{template.description}</p>
       </div>
       <SurveyForm template={template} />
     </div>
