@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { ClipboardList, FileText, LayoutDashboard, Menu, PanelLeftClose, PanelLeftOpen, Settings, Users } from "lucide-react";
+import { ClipboardList, FileText, LayoutDashboard, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Profile } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -30,28 +30,33 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
   }, [pathname]);
 
   return (
-    <div className="group/shell min-h-screen bg-[radial-gradient(circle_at_top_left,#d1fae5_0,#f8fafc_32rem)] has-[[data-sidebar='collapsed']:checked]:md:[--sidebar-width:5.5rem] md:[--sidebar-width:17rem]">
+    <div className="group/shell min-h-screen has-[[data-sidebar='collapsed']:checked]:md:[--sidebar-width:5.75rem] md:[--sidebar-width:18rem]">
       <input id="mobile-sidebar" type="checkbox" className="peer/mobile sr-only" aria-hidden="true" />
       <input id="desktop-sidebar" type="checkbox" className="peer/desktop sr-only" aria-hidden="true" data-sidebar="collapsed" />
 
       <label
         htmlFor="mobile-sidebar"
-        className="fixed inset-0 z-40 hidden bg-slate-950/40 backdrop-blur-sm peer-checked/mobile:block md:hidden"
+        className="fixed inset-0 z-40 hidden bg-[color:rgba(22,37,29,0.56)] backdrop-blur-sm peer-checked/mobile:block md:hidden"
         aria-label="Tutup menu"
       />
 
-      <aside className="fixed inset-y-0 left-0 z-50 flex w-72 -translate-x-full flex-col border-r border-white/70 bg-white/95 p-4 shadow-2xl shadow-slate-900/10 backdrop-blur transition duration-300 peer-checked/mobile:translate-x-0 md:w-[var(--sidebar-width)] md:translate-x-0 md:shadow-none md:transition-[width]">
-        <div className="flex min-h-14 items-center justify-between gap-3 rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-600 px-4 py-3 text-white md:group-has-[[data-sidebar='collapsed']:checked]/shell:justify-center md:group-has-[[data-sidebar='collapsed']:checked]/shell:px-3">
-          <div className="min-w-0 md:group-has-[[data-sidebar='collapsed']:checked]/shell:hidden">
-            <p className="truncate text-lg font-bold">Surveyor IKL</p>
-            <p className="truncate text-xs text-emerald-50">Permenkes 17/2024</p>
+      <aside className="fixed inset-y-0 left-0 z-50 flex w-72 -translate-x-full flex-col border-r border-[color:rgba(255,249,234,0.32)] bg-[color:rgba(18,63,49,0.93)] p-4 text-[var(--atlas-paper)] shadow-2xl shadow-[rgba(18,63,49,0.22)] backdrop-blur-xl transition duration-300 peer-checked/mobile:translate-x-0 md:w-[var(--sidebar-width)] md:translate-x-0 md:shadow-none md:transition-[width]">
+        <div className="relative overflow-hidden rounded-[1.75rem] border border-[color:rgba(255,249,234,0.18)] bg-[color:rgba(255,249,234,0.08)] px-4 py-4 md:group-has-[[data-sidebar='collapsed']:checked]/shell:px-3">
+          <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[var(--atlas-coral)]/30 blur-2xl" />
+          <div className="relative flex min-h-14 items-center justify-between gap-3 md:group-has-[[data-sidebar='collapsed']:checked]/shell:justify-center">
+            <div className="min-w-0 md:group-has-[[data-sidebar='collapsed']:checked]/shell:hidden">
+              <p className="atlas-heading truncate text-2xl font-black">Surveyor IKL</p>
+              <p className="truncate text-xs font-bold uppercase tracking-[0.22em] text-[color:rgba(255,249,234,0.66)]">
+                Permenkes 17/2024
+              </p>
+            </div>
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--atlas-paper)] text-sm font-black text-[var(--atlas-jungle)] ring-1 ring-white/30">
+              IKL
+            </span>
           </div>
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/15 text-sm font-bold ring-1 ring-white/20">
-            IKL
-          </span>
         </div>
 
-        <nav className="mt-5 flex flex-1 flex-col gap-1">
+        <nav className="mt-5 flex flex-1 flex-col gap-1.5">
           {nav.map((item) => {
             const Icon = item.icon;
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -60,15 +65,15 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "group/nav flex min-h-12 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-700 md:group-has-[[data-sidebar='collapsed']:checked]/shell:justify-center md:group-has-[[data-sidebar='collapsed']:checked]/shell:px-0",
-                  active && "bg-emerald-50 text-emerald-700 shadow-sm shadow-emerald-900/5",
+                  "group/nav flex min-h-12 items-center gap-3 rounded-2xl px-3 text-sm font-extrabold text-[color:rgba(255,249,234,0.68)] transition hover:bg-[color:rgba(255,249,234,0.11)] hover:text-[var(--atlas-paper)] md:group-has-[[data-sidebar='collapsed']:checked]/shell:justify-center md:group-has-[[data-sidebar='collapsed']:checked]/shell:px-0",
+                  active && "bg-[var(--atlas-paper)] text-[var(--atlas-jungle)] shadow-[0_16px_38px_rgba(0,0,0,0.16)]",
                 )}
                 title={item.label}
               >
                 <span
                   className={cn(
-                    "grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-500 transition group-hover/nav:bg-white group-hover/nav:text-emerald-700",
-                    active && "bg-white text-emerald-700",
+                    "grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[color:rgba(255,249,234,0.1)] text-[color:rgba(255,249,234,0.7)] transition group-hover/nav:bg-[color:rgba(255,249,234,0.16)] group-hover/nav:text-[var(--atlas-paper)]",
+                    active && "bg-[var(--atlas-coral)] text-white",
                   )}
                 >
                   <Icon className="h-5 w-5" />
@@ -79,44 +84,50 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
           })}
         </nav>
 
-        <div className="border-t border-slate-100 pt-4">
+        <div className="space-y-3 border-t border-[color:rgba(255,249,234,0.14)] pt-4">
           <label
             htmlFor="desktop-sidebar"
-            className="hidden min-h-11 cursor-pointer items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 md:flex md:group-has-[[data-sidebar='collapsed']:checked]/shell:justify-center md:group-has-[[data-sidebar='collapsed']:checked]/shell:px-0"
+            className="hidden min-h-11 cursor-pointer items-center gap-3 rounded-2xl px-3 text-sm font-extrabold text-[color:rgba(255,249,234,0.62)] transition hover:bg-[color:rgba(255,249,234,0.1)] hover:text-[var(--atlas-paper)] md:flex md:group-has-[[data-sidebar='collapsed']:checked]/shell:justify-center md:group-has-[[data-sidebar='collapsed']:checked]/shell:px-0"
             title="Expand/collapse sidebar"
           >
             <PanelLeftClose className="h-5 w-5 md:group-has-[[data-sidebar='collapsed']:checked]/shell:hidden" />
             <PanelLeftOpen className="hidden h-5 w-5 md:group-has-[[data-sidebar='collapsed']:checked]/shell:block" />
             <span className="md:group-has-[[data-sidebar='collapsed']:checked]/shell:hidden">Collapse</span>
           </label>
+          <form action={logoutAction}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-[color:rgba(255,249,234,0.7)] hover:bg-[color:rgba(242,111,76,0.16)] hover:text-[var(--atlas-paper)] md:group-has-[[data-sidebar='collapsed']:checked]/shell:justify-center md:group-has-[[data-sidebar='collapsed']:checked]/shell:px-0"
+              title="Keluar"
+            >
+              <LogOut className="h-5 w-5" />
+              <span className="md:group-has-[[data-sidebar='collapsed']:checked]/shell:hidden">Keluar</span>
+            </Button>
+          </form>
         </div>
       </aside>
 
       <main className="min-h-screen transition-[margin] duration-300 md:ml-[var(--sidebar-width)]">
-        <header className="sticky top-0 z-30 border-b border-white/70 bg-white/85 px-4 py-3 shadow-sm shadow-slate-900/5 backdrop-blur md:px-6 lg:px-8">
+        <header className="sticky top-0 z-30 border-b border-[color:rgba(22,37,29,0.1)] bg-[color:rgba(243,234,215,0.78)] px-4 py-3 shadow-sm shadow-black/5 backdrop-blur-xl md:px-6 lg:px-8">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <label
                 htmlFor="mobile-sidebar"
-                className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm md:hidden"
+                className="grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-2xl border border-[color:rgba(22,37,29,0.16)] bg-[var(--atlas-paper)] text-[var(--atlas-ink)] shadow-sm md:hidden"
                 aria-label="Buka menu"
               >
                 <Menu className="h-5 w-5" />
               </label>
               <div className="min-w-0">
-                <p className="text-xs font-medium text-slate-500">Masuk sebagai</p>
-                <p className="truncate font-semibold text-slate-950">{profile.full_name}</p>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--atlas-canopy)]">Masuk sebagai</p>
+                <p className="truncate font-extrabold text-[var(--atlas-ink)]">{profile.full_name}</p>
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <span className="hidden rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100 sm:inline-flex">
+              <span className="hidden rounded-full border border-[color:rgba(22,37,29,0.12)] bg-[color:rgba(255,249,234,0.64)] px-3 py-1.5 text-xs font-extrabold text-[var(--atlas-canopy)] sm:inline-flex">
                 {profile.role === "super_admin" ? "Super Admin" : "Surveyor"}
               </span>
-              <form action={logoutAction}>
-                <Button variant="outline" size="sm" className="rounded-full px-4">
-                  Keluar
-                </Button>
-              </form>
             </div>
           </div>
         </header>
