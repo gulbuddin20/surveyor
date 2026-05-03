@@ -1,13 +1,24 @@
-import { formulaSchema, questionSchema, sectionSchema, templateSchema, userSchema } from "@/lib/schemas";
+import {
+  formulaSchema,
+  identityFieldSchema,
+  questionSchema,
+  sectionSchema,
+  templateSchema,
+  templateSettingsSchema,
+  userSchema,
+} from "@/lib/schemas";
 import {
   createTemplate,
   createUser,
+  deleteIdentityField,
   deleteQuestion,
   deleteSection,
   getTemplateAdminDetail,
   listFormulas,
   listUsers,
   updateFormula,
+  updateTemplateSettings,
+  upsertIdentityField,
   upsertQuestion,
   upsertSection,
 } from "@/modules/admin/repositories/admin.repository";
@@ -54,11 +65,47 @@ export async function createTemplateFromForm(formData: FormData) {
     description: formData.get("description"),
     denominator: formData.get("denominator"),
     passingScore: formData.get("passingScore"),
+    photoMaxSizeMb: formData.get("photoMaxSizeMb") || 10,
     status: formData.get("status"),
   });
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
   await createTemplate(parsed.data);
   return { ok: true, message: "Template dibuat" };
+}
+
+export async function updateTemplateSettingsFromForm(formData: FormData) {
+  const parsed = templateSettingsSchema.safeParse({
+    templateId: formData.get("templateId"),
+    photoMaxSizeMb: formData.get("photoMaxSizeMb"),
+  });
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
+  await updateTemplateSettings(parsed.data);
+  return { ok: true, message: "Pengaturan template disimpan" };
+}
+
+export async function saveIdentityFieldFromForm(formData: FormData) {
+  const parsed = identityFieldSchema.safeParse({
+    templateId: formData.get("templateId"),
+    fieldId: formData.get("fieldId") || undefined,
+    fieldKey: formData.get("fieldKey"),
+    label: formData.get("label"),
+    fieldType: formData.get("fieldType") || "text",
+    placeholder: formData.get("placeholder") || undefined,
+    optionsText: formData.get("optionsText") || undefined,
+    isRequired: formData.get("isRequired") === "on",
+    isActive: formData.get("isActive") === "on",
+    sortOrder: formData.get("sortOrder"),
+  });
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
+  await upsertIdentityField(parsed.data);
+  return { ok: true, message: "Field identitas disimpan" };
+}
+
+export async function removeIdentityFieldFromForm(formData: FormData) {
+  const fieldId = String(formData.get("fieldId") ?? "");
+  if (!fieldId) return { ok: false, message: "Field identitas tidak valid" };
+  await deleteIdentityField(fieldId);
+  return { ok: true, message: "Field identitas dihapus" };
 }
 
 export async function updateFormulaFromForm(formData: FormData) {

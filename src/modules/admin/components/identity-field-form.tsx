@@ -1,0 +1,73 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import type { TemplateIdentityField } from "@/lib/types";
+import { saveIdentityFieldAction } from "@/modules/admin/controllers/admin.controller";
+
+export function IdentityFieldForm({
+  templateId,
+  field,
+}: {
+  templateId: string;
+  field?: TemplateIdentityField;
+}) {
+  return (
+    <form action={saveIdentityFieldAction} className="grid gap-3 rounded-2xl border border-slate-100 bg-white p-4 lg:grid-cols-12">
+      <input type="hidden" name="templateId" value={templateId} />
+      {field ? <input type="hidden" name="fieldId" value={field.id} /> : null}
+      <div className="space-y-2 lg:col-span-3">
+        <Label>Label field</Label>
+        <Input name="label" defaultValue={field?.label} placeholder="Contoh: NIB" required />
+      </div>
+      <div className="space-y-2 lg:col-span-2">
+        <Label>Kunci</Label>
+        <Input name="fieldKey" defaultValue={field?.field_key} placeholder="nib" required />
+      </div>
+      <div className="space-y-2 lg:col-span-2">
+        <Label>Tipe</Label>
+        <select
+          name="fieldType"
+          defaultValue={field?.field_type ?? "text"}
+          className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white/95 px-3.5 text-sm outline-none transition hover:border-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+        >
+          <option value="text">text</option>
+          <option value="textarea">textarea</option>
+          <option value="number">number</option>
+          <option value="date">date</option>
+          <option value="time">time</option>
+          <option value="select">select</option>
+        </select>
+      </div>
+      <div className="space-y-2 lg:col-span-3">
+        <Label>Placeholder</Label>
+        <Input name="placeholder" defaultValue={field?.placeholder ?? ""} placeholder="Petunjuk singkat" />
+      </div>
+      <div className="space-y-2 lg:col-span-2">
+        <Label>Urutan</Label>
+        <Input name="sortOrder" type="number" defaultValue={field?.sort_order ?? 0} />
+      </div>
+      <div className="space-y-2 lg:col-span-8">
+        <Label>Opsi select</Label>
+        <Textarea
+          name="optionsText"
+          defaultValue={(field?.options ?? []).join("\n")}
+          placeholder="Satu opsi per baris, hanya untuk tipe select"
+        />
+      </div>
+      <label className="flex items-center gap-2 text-sm font-medium text-slate-700 lg:col-span-1 lg:pt-8">
+        <input name="isRequired" type="checkbox" defaultChecked={field?.is_required ?? false} />
+        Wajib
+      </label>
+      <label className="flex items-center gap-2 text-sm font-medium text-slate-700 lg:col-span-1 lg:pt-8">
+        <input name="isActive" type="checkbox" defaultChecked={field?.is_active ?? true} />
+        Aktif
+      </label>
+      <div className="lg:col-span-2 lg:pt-6">
+        <Button type="submit" className="w-full">
+          {field ? "Update" : "Tambah field"}
+        </Button>
+      </div>
+    </form>
+  );
+}

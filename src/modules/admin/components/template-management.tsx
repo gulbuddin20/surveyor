@@ -46,6 +46,10 @@ export function TemplateManagement({
                   <Input name="passingScore" type="number" defaultValue={80} required />
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label>Max upload foto (MB)</Label>
+                <Input name="photoMaxSizeMb" type="number" min={1} max={25} defaultValue={10} required />
+              </div>
               <select name="status" className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white/95 px-3.5 text-sm outline-none transition hover:border-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100">
                 <option value="draft">Draft</option>
                 <option value="active">Active</option>
