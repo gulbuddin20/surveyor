@@ -1,6 +1,14 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { FormulaInput, QuestionInput, SectionInput, TemplateInput, UserInput } from "@/lib/schemas";
+import type {
+  FormulaInput,
+  IdentityFieldInput,
+  QuestionInput,
+  SectionInput,
+  TemplateInput,
+  TemplateSettingsInput,
+  UserInput,
+} from "@/lib/schemas";
 import type {
   FormulaRule,
   Profile,
@@ -8,6 +16,7 @@ import type {
   SurveyQuestion,
   SurveySection,
   SurveyTemplate,
+  TemplateIdentityField,
   TemplateAdminDetail,
 } from "@/lib/types";
 
@@ -121,6 +130,7 @@ export async function createTemplate(input: TemplateInput): Promise<SurveyTempla
       status: input.status,
       denominator: input.denominator,
       passing_score: input.passingScore,
+      photo_max_size_mb: input.photoMaxSizeMb,
     })
     .select("*")
     .single();
@@ -139,7 +149,11 @@ export async function getTemplateAdminDetail(templateId: string): Promise<Templa
   if (error) throw error;
   if (!template) return null;
 
-  const [{ data: sections, error: sectionError }, { data: questions, error: questionError }] = await Promise.all([
+  const [
+    { data: sections, error: sectionError },
+    { data: questions, error: questionError },
+    { data: identityFields, error: identityFieldError },
+  ] = await Promise.all([
     supabase
       .schema("surveyor")
       .from("survey_sections")
@@ -152,16 +166,64 @@ export async function getTemplateAdminDetail(templateId: string): Promise<Templa
       .select("*")
       .eq("template_id", templateId)
       .order("sort_order"),
+    supabase
+      .schema("surveyor")
+      .from("template_identity_fields")
+      .select("*")
+      .eq("template_id", templateId)
+      .order("sort_order"),
   ]);
   if (sectionError) throw sectionError;
   if (questionError) throw questionError;
+  if (identityFieldError) throw identityFieldError;
 
   const flatSections = (sections ?? []) as SurveySection[];
   return {
     ...(template as SurveyTemplate),
+    identityFields: (identityFields ?? []) as TemplateIdentityField[],
     flatSections,
     sections: buildSectionTree(flatSections, (questions ?? []) as SurveyQuestion[]),
   };
+}
+
+export async function updateTemplateSettings(input: TemplateSettingsInput) {
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .schema("surveyor")
+    .from("survey_templates")
+    .update({ photo_max_size_mb: input.photoMaxSizeMb })
+    .eq("id", input.templateId);
+  if (error) throw error;
+}
+
+export async function upsertIdentityField(input: IdentityFieldInput) {
+  const supabase = await createSupabaseServerClient();
+  const options = (input.optionsText ?? "")
+    .split("\n")
+    .map((option) => option.trim())
+    .filter(Boolean);
+  const payload = {
+    template_id: input.templateId,
+    field_key: input.fieldKey,
+    label: input.label,
+    field_type: input.fieldType,
+    placeholder: input.placeholder || null,
+    options,
+    is_required: input.isRequired,
+    is_active: input.isActive,
+    sort_order: input.sortOrder,
+  };
+  const query = input.fieldId
+    ? supabase.schema("surveyor").from("template_identity_fields").update(payload).eq("id", input.fieldId).eq("template_id", input.templateId)
+    : supabase.schema("surveyor").from("template_identity_fields").insert(payload);
+  const { error } = await query;
+  if (error) throw error;
+}
+
+export async function deleteIdentityField(fieldId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.schema("surveyor").from("template_identity_fields").delete().eq("id", fieldId);
+  if (error) throw error;
 }
 
 export async function upsertSection(input: SectionInput) {

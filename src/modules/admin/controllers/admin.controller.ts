@@ -9,11 +9,14 @@ import {
   getTemplateEditorData,
   getTemplateManagementData,
   getUserManagementData,
+  removeIdentityFieldFromForm,
   removeQuestionFromForm,
   removeSectionFromForm,
+  saveIdentityFieldFromForm,
   saveQuestionFromForm,
   saveSectionFromForm,
   updateFormulaFromForm,
+  updateTemplateSettingsFromForm,
 } from "@/modules/admin/services/admin.service";
 
 export async function loadUsersController() {
@@ -58,6 +61,27 @@ export async function updateFormulaAction(formData: FormData) {
   const result = await updateFormulaFromForm(formData);
   if (!result.ok) throw new Error(result.message ?? "Gagal memperbarui formula");
   revalidatePath("/admin/formulas");
+}
+
+export async function updateTemplateSettingsAction(formData: FormData) {
+  await requireSuperAdmin();
+  const result = await updateTemplateSettingsFromForm(formData);
+  if (!result.ok) throw new Error(result.message ?? "Gagal memperbarui pengaturan template");
+  revalidatePath("/admin/templates");
+}
+
+export async function saveIdentityFieldAction(formData: FormData) {
+  await requireSuperAdmin();
+  const result = await saveIdentityFieldFromForm(formData);
+  if (!result.ok) throw new Error(result.message ?? "Gagal menyimpan field identitas");
+  revalidatePath("/admin/templates");
+}
+
+export async function deleteIdentityFieldAction(formData: FormData) {
+  await requireSuperAdmin();
+  const result = await removeIdentityFieldFromForm(formData);
+  if (!result.ok) throw new Error(result.message ?? "Gagal menghapus field identitas");
+  revalidatePath("/admin/templates");
 }
 
 export async function saveSectionAction(formData: FormData) {

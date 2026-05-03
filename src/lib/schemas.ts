@@ -19,7 +19,25 @@ export const templateSchema = z.object({
   description: z.string().max(1000).default(""),
   denominator: z.coerce.number().positive(),
   passingScore: z.coerce.number().min(0).max(100),
+  photoMaxSizeMb: z.coerce.number().int().min(1).max(25).default(10),
   status: z.enum(["draft", "active", "archived"]),
+});
+
+export const identityFieldSchema = z.object({
+  templateId: z.uuid(),
+  fieldId: z.uuid().optional(),
+  fieldKey: z
+    .string()
+    .min(2)
+    .max(80)
+    .regex(/^[a-z0-9_]+$/, "Kunci field hanya boleh huruf kecil, angka, dan underscore"),
+  label: z.string().min(2).max(160),
+  fieldType: z.enum(["text", "textarea", "number", "date", "time", "select"]),
+  placeholder: z.string().max(160).optional(),
+  optionsText: z.string().max(1000).optional(),
+  isRequired: z.coerce.boolean().default(false),
+  isActive: z.coerce.boolean().default(true),
+  sortOrder: z.coerce.number().int().min(0).default(0),
 });
 
 export const sectionSchema = z.object({
@@ -57,19 +75,28 @@ export const formulaSchema = z.object({
     }),
 });
 
+export const templateSettingsSchema = z.object({
+  templateId: z.uuid(),
+  photoMaxSizeMb: z.coerce.number().int().min(1).max(25),
+});
+
 export const surveySubmissionSchema = z.object({
   templateId: z.uuid(),
   businessName: z.string().min(2).max(160),
   ownerName: z.string().max(160).optional(),
   address: z.string().max(500).optional(),
   phone: z.string().max(40).optional(),
-  notes: z.string().max(1000).optional(),
+  identityValues: z.record(z.string(), z.string().max(1000)).default({}),
+  notes: z.string().max(2000).optional(),
+  recommendationNotes: z.string().max(2000).optional(),
   nonconformities: z.array(z.uuid()).default([]),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UserInput = z.infer<typeof userSchema>;
 export type TemplateInput = z.infer<typeof templateSchema>;
+export type IdentityFieldInput = z.infer<typeof identityFieldSchema>;
+export type TemplateSettingsInput = z.infer<typeof templateSettingsSchema>;
 export type SectionInput = z.infer<typeof sectionSchema>;
 export type QuestionInput = z.infer<typeof questionSchema>;
 export type FormulaInput = z.infer<typeof formulaSchema>;

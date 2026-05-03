@@ -5,10 +5,13 @@ import type {
   SectionWithQuestions,
   SurveyAnswer,
   SurveyQuestion,
+  SurveyPhoto,
   SurveyResponse,
   SurveySection,
   SurveyTemplate,
+  TemplateIdentityField,
   TemplateDetail,
+  SurveyResultDetail,
 } from "@/lib/types";
 
 function buildSectionTree(sections: SurveySection[], questions: SurveyQuestion[]): SectionWithQuestions[] {
@@ -89,6 +92,7 @@ export async function getTemplateDetail(templateId: string): Promise<TemplateDet
     { data: sections, error: sectionError },
     { data: questions, error: questionError },
     { data: formula, error: formulaError },
+    { data: identityFields, error: identityFieldError },
   ] = await Promise.all([
     supabase
       .schema("surveyor")
@@ -111,16 +115,25 @@ export async function getTemplateDetail(templateId: string): Promise<TemplateDet
       .eq("template_id", templateId)
       .eq("is_active", true)
       .maybeSingle(),
+    supabase
+      .schema("surveyor")
+      .from("template_identity_fields")
+      .select("*")
+      .eq("template_id", templateId)
+      .eq("is_active", true)
+      .order("sort_order"),
   ]);
   if (sectionError) throw sectionError;
   if (questionError) throw questionError;
   if (formulaError) throw formulaError;
+  if (identityFieldError) throw identityFieldError;
 
   const questionRows = (questions ?? []) as SurveyQuestion[];
 
   return {
     ...(template as SurveyTemplate),
     formula: (formula as FormulaRule | null) ?? null,
+    identityFields: (identityFields ?? []) as TemplateIdentityField[],
     sections: buildSectionTree((sections ?? []) as SurveySection[], questionRows),
   };
 }
@@ -159,6 +172,80 @@ export async function createAnswers(inputs: Array<Omit<SurveyAnswer, "id" | "cre
     .select("*");
   if (error) throw error;
   return (data ?? []) as SurveyAnswer[];
+}
+
+export async function uploadEvidencePhoto({
+  userId,
+  responseId,
+  file,
+}: {
+  userId: string;
+  responseId: string;
+  file: File;
+}) {
+  const supabase = await createSupabaseServerClient();
+  const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-120) || "evidence";
+  const path = `${userId}/${responseId}/${crypto.randomUUID()}-${cleanName}`;
+  const { error } = await supabase.storage.from("survey-evidence").upload(path, file, {
+    contentType: file.type,
+    upsert: false,
+  });
+  if (error) throw error;
+  return path;
+}
+
+export async function createPhotos(inputs: Array<Omit<SurveyPhoto, "id" | "created_at">>) {
+  if (inputs.length === 0) return [];
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .schema("surveyor")
+    .from("survey_photos")
+    .insert(inputs)
+    .select("*");
+  if (error) throw error;
+  return (data ?? []) as SurveyPhoto[];
+}
+
+export async function getSurveyResultDetail(responseId: string, userId: string, isAdmin: boolean): Promise<SurveyResultDetail | null> {
+  const supabase = await createSupabaseServerClient();
+  let responseQuery = supabase
+    .schema("surveyor")
+    .from("survey_responses")
+    .select("*")
+    .eq("id", responseId);
+  if (!isAdmin) responseQuery = responseQuery.eq("surveyor_id", userId);
+  const { data: response, error: responseError } = await responseQuery.maybeSingle();
+  if (responseError) throw responseError;
+  if (!response) return null;
+
+  const [
+    { data: template, error: templateError },
+    { data: subject, error: subjectError },
+    { data: answers, error: answerError },
+    { data: photos, error: photoError },
+  ] = await Promise.all([
+    supabase.schema("surveyor").from("survey_templates").select("*").eq("id", response.template_id).single(),
+    supabase.schema("surveyor").from("msme_subjects").select("*").eq("id", response.subject_id).single(),
+    supabase
+      .schema("surveyor")
+      .from("survey_answers")
+      .select("*, survey_questions(*)")
+      .eq("response_id", responseId)
+      .order("created_at"),
+    supabase.schema("surveyor").from("survey_photos").select("*").eq("response_id", responseId).order("created_at"),
+  ]);
+  if (templateError) throw templateError;
+  if (subjectError) throw subjectError;
+  if (answerError) throw answerError;
+  if (photoError) throw photoError;
+
+  return {
+    response: response as SurveyResponse,
+    template: template as SurveyTemplate,
+    subject: subject as SurveyResultDetail["subject"],
+    answers: (answers ?? []) as SurveyResultDetail["answers"],
+    photos: (photos ?? []) as SurveyPhoto[],
+  };
 }
 
 export async function listResponsesForUser(userId: string, isAdmin: boolean) {
