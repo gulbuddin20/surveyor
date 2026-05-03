@@ -81,7 +81,6 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
           <div className="mt-4 space-y-2">
             <Label htmlFor="photoCaption">Keterangan foto</Label>
             <Textarea id="photoCaption" name="photoCaption" placeholder="Keterangan umum untuk foto bukti" />
-            <Textarea id="notes" name="notes" />
           </div>
         </Card>
       </div>

@@ -112,11 +112,12 @@ function writeLine(pdf: jsPDF, label: string, value: string, y: number) {
 
 function writeWrapped(pdf: jsPDF, text: string, x: number, y: number, width: number, lineHeight: number) {
   const lines = pdf.splitTextToSize(text, width) as string[];
-  lines.forEach((line, index) => {
+  lines.forEach((line) => {
     y = ensureSpace(pdf, y, lineHeight + 8);
-    pdf.text(line, x, y + index * lineHeight);
+    pdf.text(line, x, y);
+    y += lineHeight;
   });
-  return y + Math.max(lines.length - 1, 0) * lineHeight;
+  return y - lineHeight;
 }
 
 function ensureSpace(pdf: jsPDF, y: number, needed: number) {

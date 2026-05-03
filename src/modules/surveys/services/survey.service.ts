@@ -60,6 +60,17 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
     }
   }
 
+  const photoCaption = String(formData.get("photoCaption") ?? "").slice(0, 500) || null;
+  const photoFiles = formData
+    .getAll("evidencePhotos")
+    .filter((value): value is File => value instanceof File && value.size > 0);
+  const maxBytes = Number(template.photo_max_size_mb) * 1024 * 1024;
+  const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+  for (const file of photoFiles) {
+    if (!allowedTypes.has(file.type)) return { ok: false, message: "Foto bukti harus JPG, PNG, atau WebP" };
+    if (file.size > maxBytes) return { ok: false, message: `Ukuran foto maksimal ${template.photo_max_size_mb} MB` };
+  }
+
   const questions = flattenQuestions(template.sections);
   const score = calculateSurveyScore(questions, parsed.data.nonconformities, {
     formula: template.formula,
@@ -108,16 +119,6 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
     }),
   );
 
-  const photoCaption = String(formData.get("photoCaption") ?? "").slice(0, 500) || null;
-  const photoFiles = formData
-    .getAll("evidencePhotos")
-    .filter((value): value is File => value instanceof File && value.size > 0);
-  const maxBytes = Number(template.photo_max_size_mb) * 1024 * 1024;
-  const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-  for (const file of photoFiles) {
-    if (!allowedTypes.has(file.type)) return { ok: false, message: "Foto bukti harus JPG, PNG, atau WebP" };
-    if (file.size > maxBytes) return { ok: false, message: `Ukuran foto maksimal ${template.photo_max_size_mb} MB` };
-  }
   const photoRows = await Promise.all(
     photoFiles.map(async (file) => ({
       response_id: response.id,
