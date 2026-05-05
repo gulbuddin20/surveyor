@@ -138,7 +138,13 @@ async function writePhotoEvidence(pdf: jsPDF, photo: SurveyPhoto, index: number,
   const maxWidth = pageWidth - margin * 2;
   const imageWidth = 180;
   const imageHeight = 120;
-  y = ensureSpace(pdf, y, imageHeight + 50);
+  const caption = photo.caption ?? "Tanpa keterangan";
+  const metaX = margin + imageWidth + 16;
+  const metaWidth = maxWidth - imageWidth - 16;
+  const captionLineHeight = 10;
+  const captionLines = pdf.splitTextToSize(caption, metaWidth) as string[];
+  const captionHeight = Math.max(captionLineHeight, captionLines.length * captionLineHeight);
+  y = ensureSpace(pdf, y, Math.max(imageHeight, captionHeight) + 30);
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(9);
@@ -160,11 +166,10 @@ async function writePhotoEvidence(pdf: jsPDF, photo: SurveyPhoto, index: number,
     pdf.text("Foto tidak dapat dimuat ke PDF.", margin + 10, y + 18);
   }
 
-  const caption = photo.caption ?? "Tanpa keterangan";
-  const metaX = margin + imageWidth + 16;
-  const metaWidth = maxWidth - imageWidth - 16;
-  y = Math.max(y + imageHeight, writeWrapped(pdf, caption, metaX, y + 10, metaWidth, 10));
-  return y + 18;
+  const imageBottom = y + imageHeight;
+  pdf.text(captionLines, metaX, y + 10);
+  const captionBottom = y + 10 + captionHeight;
+  return Math.max(imageBottom, captionBottom) + 18;
 }
 
 async function getPhotoImageData(photo: SurveyPhoto): Promise<{ dataUrl: string; format: "JPEG" | "PNG" | "WEBP" } | null> {
