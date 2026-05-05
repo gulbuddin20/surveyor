@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { jsPDF } from "jspdf";
+import type { SurveyPhoto } from "@/lib/types";
 import { requireProfile } from "@/modules/auth/services/auth.service";
 import { getSurveyResultData } from "@/modules/surveys/services/survey.service";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatDate, formatNumber } from "@/lib/utils";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -70,9 +72,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (detail.photos.length === 0) {
     y = writeWrapped(pdf, "Tidak ada foto bukti diunggah.", margin, y, pageWidth - margin * 2, 10) + 8;
   }
-  detail.photos.forEach((photo, index) => {
-    y = writeLine(pdf, `Foto ${index + 1}`, `${photo.file_name ?? "Foto bukti"} — ${photo.caption ?? "Tanpa keterangan"}`, y);
-  });
+  for (const [index, photo] of detail.photos.entries()) {
+    y = await writePhotoEvidence(pdf, photo, index, y);
+  }
 
   y = ensureSpace(pdf, y + 28, 90);
   pdf.setFont("helvetica", "normal");
@@ -128,4 +130,69 @@ function ensureSpace(pdf: jsPDF, y: number, needed: number) {
 
 function labelize(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+async function writePhotoEvidence(pdf: jsPDF, photo: SurveyPhoto, index: number, y: number) {
+  const margin = 40;
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const maxWidth = pageWidth - margin * 2;
+  const imageWidth = 180;
+  const imageHeight = 120;
+  y = ensureSpace(pdf, y, imageHeight + 50);
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(9);
+  pdf.text(`Foto ${index + 1}`, margin, y);
+  pdf.setFont("helvetica", "normal");
+  pdf.text(photo.file_name ?? "Foto bukti", margin + 60, y);
+  y += 12;
+
+  const image = await getPhotoImageData(photo);
+  if (image) {
+    try {
+      pdf.addImage(image.dataUrl, image.format, margin, y, imageWidth, imageHeight, undefined, "FAST");
+    } catch {
+      pdf.rect(margin, y, imageWidth, imageHeight);
+      pdf.text("Foto tidak dapat dimuat ke PDF.", margin + 10, y + 18);
+    }
+  } else {
+    pdf.rect(margin, y, imageWidth, imageHeight);
+    pdf.text("Foto tidak dapat dimuat ke PDF.", margin + 10, y + 18);
+  }
+
+  const caption = photo.caption ?? "Tanpa keterangan";
+  const metaX = margin + imageWidth + 16;
+  const metaWidth = maxWidth - imageWidth - 16;
+  y = Math.max(y + imageHeight, writeWrapped(pdf, caption, metaX, y + 10, metaWidth, 10));
+  return y + 18;
+}
+
+async function getPhotoImageData(photo: SurveyPhoto): Promise<{ dataUrl: string; format: "JPEG" | "PNG" | "WEBP" } | null> {
+  const format = getImageFormat(photo.mime_type, photo.file_name);
+  if (!format) return null;
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.storage.from("survey-evidence").download(photo.storage_path);
+  if (error || !data) return null;
+
+  const buffer = Buffer.from(await data.arrayBuffer());
+  const mimeType = photo.mime_type ?? mimeTypeForFormat(format);
+  return {
+    dataUrl: `data:${mimeType};base64,${buffer.toString("base64")}`,
+    format,
+  };
+}
+
+function getImageFormat(mimeType: string | null, fileName: string | null): "JPEG" | "PNG" | "WEBP" | null {
+  const value = `${mimeType ?? ""} ${fileName ?? ""}`.toLowerCase();
+  if (value.includes("jpeg") || value.includes("jpg")) return "JPEG";
+  if (value.includes("png")) return "PNG";
+  if (value.includes("webp")) return "WEBP";
+  return null;
+}
+
+function mimeTypeForFormat(format: "JPEG" | "PNG" | "WEBP") {
+  if (format === "JPEG") return "image/jpeg";
+  if (format === "PNG") return "image/png";
+  return "image/webp";
 }
