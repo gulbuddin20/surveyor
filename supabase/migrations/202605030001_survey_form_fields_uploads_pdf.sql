@@ -118,7 +118,7 @@ from surveyor.survey_templates
 where code ilike '%food%' or name ilike '%truck%' or name ilike '%keliling%'
 on conflict (template_id, field_key) do nothing;
 
-insert into surveyor.audit_logs (actor_id, action, entity_table, metadata)
+insert into surveyor.audit_logs (actor_id, action, entity_type, metadata)
 values (
   auth.uid(),
   'schema_migration',

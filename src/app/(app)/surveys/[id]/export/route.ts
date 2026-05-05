@@ -6,6 +6,8 @@ import { getSurveyResultData } from "@/modules/surveys/services/survey.service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatDate, formatNumber } from "@/lib/utils";
 
+const maxEmbeddedPhotoBytes = 8 * 1024 * 1024;
+
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const profile = await requireProfile();
@@ -179,6 +181,7 @@ async function getPhotoImageData(photo: SurveyPhoto): Promise<{ dataUrl: string;
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.storage.from("survey-evidence").download(photo.storage_path);
   if (error || !data) return null;
+  if (data.size > maxEmbeddedPhotoBytes) return null;
 
   const buffer = Buffer.from(await data.arrayBuffer());
   const mimeType = photo.mime_type ?? mimeTypeForFormat(format);

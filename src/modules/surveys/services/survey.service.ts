@@ -29,7 +29,7 @@ export async function getSurveyResultData(profile: Profile, responseId: string) 
 }
 
 export async function submitSurvey(profile: Profile, formData: FormData) {
-  const nonconformities = formData.getAll("nonconformities").map(String);
+  const nonconformities = Array.from(new Set(formData.getAll("nonconformities").map(String)));
   const identityValues = Object.fromEntries(
     Array.from(formData.entries())
       .filter(([key]) => key.startsWith("identity."))
@@ -74,7 +74,12 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
   }
 
   const questions = flattenQuestions(template.sections);
-  const score = calculateSurveyScore(questions, parsed.data.nonconformities, {
+  const byId = new Map<string, SurveyQuestion>(questions.map((question) => [question.id, question]));
+  const validNonconformities = parsed.data.nonconformities.filter((questionId) => byId.has(questionId));
+  if (validNonconformities.length !== parsed.data.nonconformities.length) {
+    return { ok: false, message: "Pertanyaan tidak valid" };
+  }
+  const score = calculateSurveyScore(questions, validNonconformities, {
     formula: template.formula,
     templateDenominator: template.denominator,
     templatePassingScore: template.passing_score,
@@ -105,11 +110,10 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
     updated_at: new Date().toISOString(),
   });
 
-  const byId = new Map<string, SurveyQuestion>(questions.map((question) => [question.id, question]));
   await createAnswers(
-    parsed.data.nonconformities.flatMap((questionId) => {
+    validNonconformities.map((questionId) => {
       const question = byId.get(questionId);
-      if (!question) return [];
+      if (!question) throw new Error("Pertanyaan tidak valid");
       return {
         response_id: response.id,
         question_id: question.id,
