@@ -108,13 +108,14 @@ export async function updateFormula(input: FormulaInput) {
   const { error } = await supabase
     .schema("surveyor")
     .from("formula_rules")
-    .update({
+    .upsert({
+      template_id: input.templateId,
+      name: "Skor Total Inspeksi",
       denominator: input.denominator,
       passing_score: input.passingScore,
       expression: input.expression,
-    })
-    .eq("template_id", input.templateId)
-    .eq("is_active", true);
+      is_active: true,
+    }, { onConflict: "template_id,name" });
   if (error) throw error;
 }
 
