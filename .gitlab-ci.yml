@@ -99,11 +99,11 @@ build_dev_image:
     - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
   script:
     - ': "${DEV_SUPABASE_URL:?DEV_SUPABASE_URL is required}"'
-    - ': "${DEV_SUPABASE_PUBLISHABLE_KEY:?DEV_SUPABASE_PUBLISHABLE_KEY is required}"'
+    - ': "${DEV_SUPABASE_ANON_KEY:?DEV_SUPABASE_ANON_KEY is required}"'
     - |
       docker build \
         --build-arg NEXT_PUBLIC_SUPABASE_URL="$DEV_SUPABASE_URL" \
-        --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$DEV_SUPABASE_PUBLISHABLE_KEY" \
+        --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$DEV_SUPABASE_ANON_KEY" \
         -t "${IMAGE_REPO}:${DEV_IMAGE_TAG}" .
     - docker push "${IMAGE_REPO}:${DEV_IMAGE_TAG}"
   after_script:
@@ -122,11 +122,11 @@ build_prod_image:
     - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
   script:
     - ': "${PROD_SUPABASE_URL:?PROD_SUPABASE_URL is required}"'
-    - ': "${PROD_SUPABASE_PUBLISHABLE_KEY:?PROD_SUPABASE_PUBLISHABLE_KEY is required}"'
+    - ': "${PROD_SUPABASE_ANON_KEY:?PROD_SUPABASE_ANON_KEY is required}"'
     - |
       docker build \
         --build-arg NEXT_PUBLIC_SUPABASE_URL="$PROD_SUPABASE_URL" \
-        --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$PROD_SUPABASE_PUBLISHABLE_KEY" \
+        --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$PROD_SUPABASE_ANON_KEY" \
         -t "${IMAGE_REPO}:${PROD_IMAGE_TAG}" .
     - docker push "${IMAGE_REPO}:${PROD_IMAGE_TAG}"
   after_script:
@@ -158,8 +158,8 @@ deploy_dev:
       NODE_ENV=production
       NEXT_TELEMETRY_DISABLED=1
       NEXT_PUBLIC_SUPABASE_URL=${DEV_SUPABASE_URL}
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${DEV_SUPABASE_PUBLISHABLE_KEY}
-      SUPABASE_SECRET_KEY=${DEV_SUPABASE_SECRET_KEY}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${DEV_SUPABASE_ANON_KEY}
+      SUPABASE_SECRET_KEY=${DEV_SUPABASE_SERVICE_ROLE_KEY}
       EOF
     - |
       ssh "$DEV_USER@$DEV_HOST" "cat > '$DEV_APP_DIR/docker-compose.yml'" <<EOF
