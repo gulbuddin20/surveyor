@@ -31,25 +31,42 @@ SUPABASE_SECRET_KEY=sb_secret_... # server/admin only
 
 ## Database
 
-The copyable migration is in:
+The migration files are in:
 
 ```bash
-supabase/migrations/202605010001_create_surveyor_schema.sql
+supabase/migrations/
 ```
 
-It creates:
+Run them in timestamp order for every self-hosted Supabase environment:
+
+1. `202605010001_create_surveyor_schema.sql`
+2. `202605010002_seed_ikl_templates.sql`
+3. `202605020001_nested_questionnaire_admin.sql`
+4. `202605020002_seed_full_ikl_questionnaires.sql`
+5. `202605030001_survey_form_fields_uploads_pdf.sql`
+
+They create:
 
 - `surveyor` schema
 - profiles, survey templates, sections, questions, formula rules, MSME subjects, responses, answers, photos, audit logs
 - role-aware RLS policies
 - private `survey-evidence` storage bucket and policies
+- editable template identity fields, upload settings, recommendation notes, and photo metadata
 - seed templates from the attached IKL PDFs using OCR extraction
 
-Apply with Supabase CLI or SQL Editor:
+### Self-hosted Supabase
+
+Use the same ordered migration set for both dev and prod.
+
+With Supabase CLI, copy this project into the machine that can reach your self-hosted database, configure `supabase/config.toml` for that instance, then run:
 
 ```bash
-supabase db push --project-ref epbcuinnfignkqjejkrx
+supabase db push
 ```
+
+Without Supabase CLI, open your self-hosted Supabase Studio SQL Editor and execute each SQL file in order. If you prefer direct Postgres access, run each file with `psql` against the self-hosted database connection string.
+
+After applying the SQL, make sure PostgREST can access the custom schema by exposing `surveyor` in the API schema list, then reload/restart the Supabase API/PostgREST service.
 
 ## Architecture
 

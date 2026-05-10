@@ -20,7 +20,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-jakarta);
-  --font-serif: var(--font-fraunces);
+  --font-serif: var(--font-jakarta);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -99,7 +99,7 @@ body::after {
 }
 
 .atlas-heading {
-  font-family: var(--font-fraunces), serif;
+  font-family: var(--font-jakarta), system-ui, sans-serif;
   letter-spacing: -0.045em;
 }
 
