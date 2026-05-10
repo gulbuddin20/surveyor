@@ -14,6 +14,8 @@
   --atlas-lagoon: #1e8a91;
   --atlas-line: rgba(22, 37, 29, 0.14);
   --atlas-shadow: 0 24px 70px rgba(22, 37, 29, 0.14);
+  --font-jakarta: "Plus Jakarta Sans", "Aptos", "Segoe UI", system-ui, sans-serif;
+  --font-geist-mono: "Geist Mono", "SFMono-Regular", "Cascadia Code", "Roboto Mono", monospace;
 }
 
 @theme inline {

@@ -1,0 +1,267 @@
+stages:
+  - validate
+  - migrate
+  - build
+  - deploy
+
+variables:
+  DOCKER_BUILDKIT: "1"
+  IMAGE_REPO: "pkcpalmerah/surveyor"
+  DEV_IMAGE_TAG: "dev-${CI_COMMIT_SHORT_SHA}"
+  PROD_IMAGE_TAG: "prod-${CI_COMMIT_SHORT_SHA}"
+
+lint:
+  stage: validate
+  image: node:20-alpine
+  tags:
+    - ibm
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_COMMIT_TAG'
+  script:
+    - npm ci --ignore-scripts
+    - npm run lint
+
+docker_build:
+  stage: validate
+  image: docker:29-cli
+  tags:
+    - ibm
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+    - if: '$CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_COMMIT_TAG'
+  script:
+    - |
+      docker build \
+        --build-arg NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL:-https://example.supabase.co}" \
+        --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-placeholder-publishable-key}" \
+        -t "${IMAGE_REPO}:ci-checks-${CI_COMMIT_SHORT_SHA}" .
+
+.migrate_template:
+  stage: migrate
+  image: postgres:16-alpine
+  tags:
+    - ibm
+  needs:
+    - lint
+    - docker_build
+  variables:
+    MIGRATION_TABLE: "public.surveyor_schema_migrations"
+  script:
+    - chmod +x ci/run-migrations.sh
+    - ci/run-migrations.sh
+
+migrate_dev:
+  extends: .migrate_template
+  image: docker:29-cli
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+  environment:
+    name: dev
+  variables:
+    POSTGRES_CONTAINER: "supabase-db"
+    POSTGRES_USER: "postgres"
+    POSTGRES_DB: "postgres"
+
+migrate_prod:
+  extends: .migrate_template
+  image: alpine:3.22
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+  environment:
+    name: production
+  before_script:
+    - apk add --no-cache openssh-client
+    - mkdir -p ~/.ssh
+    - printf '%s\n' "$PROD_DB_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+    - chmod 600 ~/.ssh/id_ed25519
+    - ssh-keyscan -p "${PROD_DB_SSH_PORT:-22}" -H "$PROD_DB_SSH_HOST" >> ~/.ssh/known_hosts
+  variables:
+    POSTGRES_CONTAINER: "supabase-db"
+    POSTGRES_USER: "postgres"
+    POSTGRES_DB: "postgres"
+    SSH_HOST: "$PROD_DB_SSH_HOST"
+    SSH_USER: "$PROD_DB_SSH_USER"
+    SSH_PORT: "$PROD_DB_SSH_PORT"
+
+build_dev_image:
+  stage: build
+  image: docker:29-cli
+  tags:
+    - ibm
+  needs:
+    - migrate_dev
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+  before_script:
+    - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+  script:
+    - ': "${DEV_SUPABASE_URL:?DEV_SUPABASE_URL is required}"'
+    - ': "${DEV_SUPABASE_PUBLISHABLE_KEY:?DEV_SUPABASE_PUBLISHABLE_KEY is required}"'
+    - |
+      docker build \
+        --build-arg NEXT_PUBLIC_SUPABASE_URL="$DEV_SUPABASE_URL" \
+        --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$DEV_SUPABASE_PUBLISHABLE_KEY" \
+        -t "${IMAGE_REPO}:${DEV_IMAGE_TAG}" .
+    - docker push "${IMAGE_REPO}:${DEV_IMAGE_TAG}"
+  after_script:
+    - docker logout || true
+
+build_prod_image:
+  stage: build
+  image: docker:29-cli
+  tags:
+    - ibm
+  needs:
+    - migrate_prod
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+  before_script:
+    - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+  script:
+    - ': "${PROD_SUPABASE_URL:?PROD_SUPABASE_URL is required}"'
+    - ': "${PROD_SUPABASE_PUBLISHABLE_KEY:?PROD_SUPABASE_PUBLISHABLE_KEY is required}"'
+    - |
+      docker build \
+        --build-arg NEXT_PUBLIC_SUPABASE_URL="$PROD_SUPABASE_URL" \
+        --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$PROD_SUPABASE_PUBLISHABLE_KEY" \
+        -t "${IMAGE_REPO}:${PROD_IMAGE_TAG}" .
+    - docker push "${IMAGE_REPO}:${PROD_IMAGE_TAG}"
+  after_script:
+    - docker logout || true
+
+deploy_dev:
+  stage: deploy
+  image: alpine:3.22
+  tags:
+    - ibm
+  needs:
+    - build_dev_image
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+  environment:
+    name: dev
+    url: https://surveyor-dev.pkmpalmerah.cloud
+  before_script:
+    - apk add --no-cache openssh-client
+    - mkdir -p ~/.ssh
+    - printf '%s\n' "$DEV_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+    - chmod 600 ~/.ssh/id_ed25519
+    - ssh-keyscan -H "$DEV_HOST" >> ~/.ssh/known_hosts
+  script:
+    - ssh "$DEV_USER@$DEV_HOST" "mkdir -p '$DEV_APP_DIR'"
+    - |
+      ssh "$DEV_USER@$DEV_HOST" "cat > '$DEV_APP_DIR/.env'" <<EOF
+      WEB_IMAGE=${IMAGE_REPO}:${DEV_IMAGE_TAG}
+      NODE_ENV=production
+      NEXT_TELEMETRY_DISABLED=1
+      NEXT_PUBLIC_SUPABASE_URL=${DEV_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${DEV_SUPABASE_PUBLISHABLE_KEY}
+      SUPABASE_SECRET_KEY=${DEV_SUPABASE_SECRET_KEY}
+      EOF
+    - |
+      ssh "$DEV_USER@$DEV_HOST" "cat > '$DEV_APP_DIR/docker-compose.yml'" <<EOF
+      services:
+        web:
+          image: \${WEB_IMAGE}
+          ports:
+            - 127.0.0.1:${DEV_PORT}:3000
+          environment:
+            NODE_ENV: \${NODE_ENV}
+            NEXT_TELEMETRY_DISABLED: \${NEXT_TELEMETRY_DISABLED}
+            NEXT_PUBLIC_SUPABASE_URL: \${NEXT_PUBLIC_SUPABASE_URL}
+            NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: \${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
+            SUPABASE_SECRET_KEY: \${SUPABASE_SECRET_KEY}
+          mem_limit: 512m
+          cpus: 0.50
+          restart: unless-stopped
+      EOF
+    - ssh "$DEV_USER@$DEV_HOST" "cd '$DEV_APP_DIR' && docker compose pull && docker compose up -d --remove-orphans"
+
+deploy_prod:
+  stage: deploy
+  image: alpine:3.22
+  tags:
+    - ibm
+  needs:
+    - build_prod_image
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+  environment:
+    name: production
+    url: https://surveyor.pkmpalmerah.com
+  before_script:
+    - apk add --no-cache curl jq
+  script:
+    - ': "${DOKPLOY_URL:?DOKPLOY_URL is required}"'
+    - ': "${DOKPLOY_API_KEY:?DOKPLOY_API_KEY is required}"'
+    - ': "${DOKPLOY_COMPOSE_ID:?DOKPLOY_COMPOSE_ID is required}"'
+    - |
+      set -eu
+      TARGET_IMAGE="${IMAGE_REPO}:${PROD_IMAGE_TAG}"
+
+      GET_HTTP=$(curl -sS -o /tmp/dokploy_compose_one.json -w "%{http_code}" \
+        "$DOKPLOY_URL/api/compose.one?composeId=$DOKPLOY_COMPOSE_ID" \
+        -H "x-api-key: $DOKPLOY_API_KEY" || true)
+
+      if [ "$GET_HTTP" -lt 200 ] || [ "$GET_HTTP" -ge 300 ]; then
+        echo "compose.one failed with HTTP $GET_HTTP"
+        cat /tmp/dokploy_compose_one.json
+        exit 1
+      fi
+
+      jq -r '.env // empty' /tmp/dokploy_compose_one.json > /tmp/dokploy_current.env
+
+      if [ ! -s /tmp/dokploy_current.env ]; then
+        echo "Unable to read existing Dokploy env from compose.one response"
+        exit 1
+      fi
+
+      for REQUIRED_KEY in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY SUPABASE_SECRET_KEY; do
+        if ! grep -q "^${REQUIRED_KEY}=" /tmp/dokploy_current.env; then
+          echo "Refusing to update Dokploy env: missing ${REQUIRED_KEY} in existing env"
+          exit 1
+        fi
+      done
+
+      grep -vE '^(WEB_IMAGE)=' /tmp/dokploy_current.env > /tmp/dokploy_merged.env || true
+      {
+        printf "WEB_IMAGE=%s\n" "$TARGET_IMAGE"
+        cat /tmp/dokploy_merged.env
+      } > /tmp/dokploy_next.env
+
+      jq -n \
+        --arg composeId "$DOKPLOY_COMPOSE_ID" \
+        --rawfile env /tmp/dokploy_next.env \
+        '{composeId: $composeId, env: $env}' > /tmp/dokploy_update_payload.json
+
+      UPDATE_HTTP=$(curl -sS -o /tmp/dokploy_update.json -w "%{http_code}" \
+        -X POST "$DOKPLOY_URL/api/compose.update" \
+        -H "Content-Type: application/json" \
+        -H "x-api-key: $DOKPLOY_API_KEY" \
+        --data @/tmp/dokploy_update_payload.json)
+
+      if [ "$UPDATE_HTTP" -lt 200 ] || [ "$UPDATE_HTTP" -ge 300 ]; then
+        echo "compose.update failed with HTTP $UPDATE_HTTP"
+        cat /tmp/dokploy_update.json
+        exit 1
+      fi
+
+      printf '{"composeId":"%s","title":"GitLab %s","description":"Deploy %s"}' \
+        "$DOKPLOY_COMPOSE_ID" "$CI_PIPELINE_ID" "$TARGET_IMAGE" > /tmp/dokploy_deploy_payload.json
+
+      DEPLOY_HTTP=$(curl -sS -o /tmp/dokploy_deploy.json -w "%{http_code}" \
+        -X POST "$DOKPLOY_URL/api/compose.deploy" \
+        -H "Content-Type: application/json" \
+        -H "x-api-key: $DOKPLOY_API_KEY" \
+        --data @/tmp/dokploy_deploy_payload.json)
+
+      if [ "$DEPLOY_HTTP" -lt 200 ] || [ "$DEPLOY_HTTP" -ge 300 ]; then
+        echo "compose.deploy failed with HTTP $DEPLOY_HTTP"
+        cat /tmp/dokploy_deploy.json
+        exit 1
+      fi
+
+      echo "Dokploy deploy triggered for $TARGET_IMAGE"
