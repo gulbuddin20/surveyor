@@ -40,6 +40,24 @@ export const identityFieldSchema = z.object({
   sortOrder: z.coerce.number().int().min(0).default(0),
 });
 
+export const responseFieldSchema = z.object({
+  templateId: z.uuid(),
+  fieldId: z.uuid().optional(),
+  fieldKey: z
+    .string()
+    .min(2)
+    .max(80)
+    .regex(/^[a-z0-9_]+$/, "Kunci field hanya boleh huruf kecil, angka, dan underscore"),
+  label: z.string().min(2).max(160),
+  fieldType: z.enum(["text", "textarea", "number", "date", "time", "select", "photo"]),
+  placeholder: z.string().max(160).optional(),
+  optionsText: z.string().max(1000).optional(),
+  maxSizeMb: z.coerce.number().int().min(1).max(25).optional(),
+  isRequired: z.coerce.boolean().default(false),
+  isActive: z.coerce.boolean().default(true),
+  sortOrder: z.coerce.number().int().min(0).default(0),
+});
+
 export const sectionSchema = z.object({
   templateId: z.uuid(),
   sectionId: z.uuid().optional(),
@@ -82,13 +100,13 @@ export const templateSettingsSchema = z.object({
 
 export const surveySubmissionSchema = z.object({
   templateId: z.uuid(),
+  responseId: z.uuid().optional(),
   businessName: z.string().max(160).optional(),
   ownerName: z.string().max(160).optional(),
   address: z.string().max(500).optional(),
   phone: z.string().max(40).optional(),
   identityValues: z.record(z.string(), z.string().max(1000)).default({}),
-  notes: z.string().max(2000).optional(),
-  recommendationNotes: z.string().max(2000).optional(),
+  responseValues: z.record(z.string(), z.string().max(2000)).default({}),
   nonconformities: z.array(z.uuid()).default([]),
 });
 
@@ -96,6 +114,7 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type UserInput = z.infer<typeof userSchema>;
 export type TemplateInput = z.infer<typeof templateSchema>;
 export type IdentityFieldInput = z.infer<typeof identityFieldSchema>;
+export type ResponseFieldInput = z.infer<typeof responseFieldSchema>;
 export type TemplateSettingsInput = z.infer<typeof templateSettingsSchema>;
 export type SectionInput = z.infer<typeof sectionSchema>;
 export type QuestionInput = z.infer<typeof questionSchema>;

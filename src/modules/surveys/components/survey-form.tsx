@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { Camera, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Textarea } from "@/components/ui/textarea";
 import type { SectionWithQuestions, SurveyResultDetail, TemplateDetail } from "@/lib/types";
 import { IdentityFieldsCard } from "@/modules/surveys/components/identity-fields-card";
+import { ResponseFieldsCard } from "@/modules/surveys/components/response-fields-card";
 import { calculateSurveyProgress, calculateSurveyScore, flattenQuestions } from "@/modules/surveys/services/formula.service";
 import { submitSurveyAction } from "@/modules/surveys/controllers/survey.controller";
 import { useSurveyWizardStore } from "@/stores/survey-wizard.store";
@@ -59,55 +58,12 @@ export function SurveyForm({
             onToggleQuestion={toggleQuestion}
           />
         ))}
-        <Card>
-          <CardHeader>
-            <CardTitle>Foto bukti & catatan</CardTitle>
-            <CardDescription>
-              Upload foto bukti kunjungan. Maksimal {Number(template.photo_max_size_mb)} MB per file.
-            </CardDescription>
-          </CardHeader>
-          <label className="block cursor-pointer rounded-[1.5rem] border border-dashed border-[color:rgba(22,37,29,0.2)] bg-[color:rgba(255,249,234,0.38)] p-5 text-center text-sm text-[color:rgba(22,37,29,0.58)] transition hover:border-[var(--atlas-coral)] hover:bg-[var(--atlas-paper)]">
-            <Camera className="mx-auto mb-2 h-6 w-6" />
-            <span className="block font-extrabold text-[var(--atlas-ink)]">Pilih foto bukti</span>
-            <span>JPG, PNG, atau WebP. Boleh lebih dari satu foto.</span>
-            <input
-              name="evidencePhotos"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              className="sr-only"
-            />
-          </label>
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="notes">Catatan / kritik / saran</Label>
-              <Textarea
-                id="notes"
-                name="notes"
-                defaultValue={initialDetail?.response.notes ?? ""}
-                placeholder="Catatan temuan, kritik, atau saran pembinaan"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="recommendationNotes">Rekomendasi tindak lanjut</Label>
-              <Textarea
-                id="recommendationNotes"
-                name="recommendationNotes"
-                defaultValue={initialDetail?.response.recommendation_notes ?? ""}
-                placeholder="Contoh: perbaiki fasilitas cuci tangan, lengkapi APD"
-              />
-            </div>
-          </div>
-          <div className="mt-4 space-y-2">
-            <Label htmlFor="photoCaption">Keterangan foto</Label>
-            <Textarea id="photoCaption" name="photoCaption" placeholder="Keterangan umum untuk foto bukti" />
-          </div>
-          {initialDetail?.photos.length ? (
-            <p className="mt-3 text-sm font-semibold text-[color:rgba(22,37,29,0.58)]">
-              {initialDetail.photos.length} foto lama tetap tersimpan. Upload foto baru hanya menambahkan bukti tambahan.
-            </p>
-          ) : null}
-        </Card>
+        <ResponseFieldsCard fields={template.responseFields} values={initialDetail?.response.response_values} />
+        {initialDetail?.photos.length ? (
+          <p className="rounded-2xl bg-[color:rgba(255,249,234,0.62)] p-3 text-sm font-semibold text-[color:rgba(22,37,29,0.58)]">
+            {initialDetail.photos.length} foto lama tetap tersimpan. Upload foto baru hanya menambahkan bukti tambahan.
+          </p>
+        ) : null}
       </div>
       <aside className="xl:sticky xl:top-24 xl:h-fit">
         <Card>

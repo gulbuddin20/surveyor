@@ -26,12 +26,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   y += 24;
 
   y = sectionTitle(pdf, "Identitas MSME/TPP", y);
-  const identityRows = Object.entries(detail.subject.metadata);
-  for (const [key, value] of identityRows) {
+  for (const field of detail.identityFields) {
+    const value = detail.subject.metadata[field.field_key];
     y = ensureSpace(pdf, y, 36);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(9);
-    pdf.text(labelize(key), margin, y);
+    pdf.text(field.label, margin, y);
     pdf.setFont("helvetica", "normal");
     y = writeWrapped(pdf, String(value || "-"), margin + 190, y, 320, 10);
     y += 8;
@@ -65,17 +65,25 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   });
 
   y += 8;
-  y = sectionTitle(pdf, "Catatan dan Rekomendasi", y);
-  y = writeLine(pdf, "Catatan / kritik / saran", detail.response.notes || "-", y);
-  y = writeLine(pdf, "Rekomendasi tindak lanjut", detail.response.recommendation_notes || "-", y);
-
-  y += 8;
-  y = sectionTitle(pdf, "Foto Bukti", y);
-  if (detail.photos.length === 0) {
-    y = writeWrapped(pdf, "Tidak ada foto bukti diunggah.", margin, y, pageWidth - margin * 2, 10) + 8;
+  const responseFields = detail.responseFields.filter((field) => field.field_type !== "photo");
+  if (responseFields.length) {
+    y = sectionTitle(pdf, "Field Tambahan", y);
+    for (const field of responseFields) {
+      y = writeLine(pdf, field.label, String(detail.response.response_values?.[field.field_key] || "-"), y);
+    }
+    y += 8;
   }
-  for (const [index, photo] of detail.photos.entries()) {
-    y = await writePhotoEvidence(pdf, photo, index, y);
+
+  const photoFields = detail.responseFields.filter((field) => field.field_type === "photo");
+  if (photoFields.length || detail.photos.length) {
+    y = sectionTitle(pdf, "Foto Bukti", y);
+    if (detail.photos.length === 0) {
+      y = writeWrapped(pdf, "Tidak ada foto bukti diunggah.", margin, y, pageWidth - margin * 2, 10) + 8;
+    }
+    const photoFieldLabels = new Map(detail.responseFields.map((field) => [field.field_key, field.label]));
+    for (const [index, photo] of detail.photos.entries()) {
+      y = await writePhotoEvidence(pdf, photo, index, y, photoFieldLabels.get(photo.field_key ?? "") ?? "Foto bukti");
+    }
   }
 
   y = ensureSpace(pdf, y + 28, 90);
@@ -130,11 +138,7 @@ function ensureSpace(pdf: jsPDF, y: number, needed: number) {
   return 44;
 }
 
-function labelize(value: string) {
-  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-async function writePhotoEvidence(pdf: jsPDF, photo: SurveyPhoto, index: number, y: number) {
+async function writePhotoEvidence(pdf: jsPDF, photo: SurveyPhoto, index: number, y: number, fieldLabel: string) {
   const margin = 40;
   const pageWidth = pdf.internal.pageSize.getWidth();
   const maxWidth = pageWidth - margin * 2;
@@ -150,7 +154,7 @@ async function writePhotoEvidence(pdf: jsPDF, photo: SurveyPhoto, index: number,
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(9);
-  pdf.text(`Foto ${index + 1}`, margin, y);
+  pdf.text(`${fieldLabel} ${index + 1}`, margin, y);
   pdf.setFont("helvetica", "normal");
   pdf.text(photo.file_name ?? "Foto bukti", margin + 60, y);
   y += 12;

@@ -4,6 +4,7 @@ import type {
   FormulaInput,
   IdentityFieldInput,
   QuestionInput,
+  ResponseFieldInput,
   SectionInput,
   TemplateInput,
   TemplateSettingsInput,
@@ -17,6 +18,7 @@ import type {
   SurveySection,
   SurveyTemplate,
   TemplateIdentityField,
+  TemplateResponseField,
   TemplateAdminDetail,
 } from "@/lib/types";
 
@@ -136,9 +138,7 @@ export async function createTemplate(input: TemplateInput): Promise<SurveyTempla
     .select("*")
     .single();
   if (error) throw error;
-  const template = data as SurveyTemplate;
-  await createDefaultIdentityFields(template.id);
-  return template;
+  return data as SurveyTemplate;
 }
 
 export async function deleteTemplate(templateId: string) {
@@ -162,53 +162,6 @@ export async function deleteTemplate(templateId: string) {
   if (error) throw error;
 }
 
-async function createDefaultIdentityFields(templateId: string) {
-  const supabase = await createSupabaseServerClient();
-  const defaults = [
-    {
-      template_id: templateId,
-      field_key: "business_name",
-      label: "Nama usaha",
-      field_type: "text",
-      placeholder: "Nama UMKM/TPP",
-      is_required: true,
-      sort_order: 10,
-    },
-    {
-      template_id: templateId,
-      field_key: "owner_name",
-      label: "Nama pengelola/pemilik/penanggung jawab",
-      field_type: "text",
-      placeholder: "Nama penanggung jawab",
-      is_required: false,
-      sort_order: 20,
-    },
-    {
-      template_id: templateId,
-      field_key: "address",
-      label: "Alamat",
-      field_type: "textarea",
-      placeholder: "Alamat lengkap lokasi usaha",
-      is_required: false,
-      sort_order: 30,
-    },
-    {
-      template_id: templateId,
-      field_key: "phone",
-      label: "Nomor handphone",
-      field_type: "text",
-      placeholder: "08xxxxxxxxxx",
-      is_required: false,
-      sort_order: 40,
-    },
-  ];
-  const { error } = await supabase
-    .schema("surveyor")
-    .from("template_identity_fields")
-    .insert(defaults);
-  if (error) throw error;
-}
-
 export async function getTemplateAdminDetail(templateId: string): Promise<TemplateAdminDetail | null> {
   const supabase = await createSupabaseServerClient();
   const { data: template, error } = await supabase
@@ -224,6 +177,7 @@ export async function getTemplateAdminDetail(templateId: string): Promise<Templa
     { data: sections, error: sectionError },
     { data: questions, error: questionError },
     { data: identityFields, error: identityFieldError },
+    { data: responseFields, error: responseFieldError },
   ] = await Promise.all([
     supabase
       .schema("surveyor")
@@ -243,15 +197,23 @@ export async function getTemplateAdminDetail(templateId: string): Promise<Templa
       .select("*")
       .eq("template_id", templateId)
       .order("sort_order"),
+    supabase
+      .schema("surveyor")
+      .from("template_response_fields")
+      .select("*")
+      .eq("template_id", templateId)
+      .order("sort_order"),
   ]);
   if (sectionError) throw sectionError;
   if (questionError) throw questionError;
   if (identityFieldError) throw identityFieldError;
+  if (responseFieldError) throw responseFieldError;
 
   const flatSections = (sections ?? []) as SurveySection[];
   return {
     ...(template as SurveyTemplate),
     identityFields: (identityFields ?? []) as TemplateIdentityField[],
+    responseFields: (responseFields ?? []) as TemplateResponseField[],
     flatSections,
     sections: buildSectionTree(flatSections, (questions ?? []) as SurveyQuestion[]),
   };
@@ -294,6 +256,37 @@ export async function upsertIdentityField(input: IdentityFieldInput) {
 export async function deleteIdentityField(fieldId: string) {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.schema("surveyor").from("template_identity_fields").delete().eq("id", fieldId);
+  if (error) throw error;
+}
+
+export async function upsertResponseField(input: ResponseFieldInput) {
+  const supabase = await createSupabaseServerClient();
+  const options = (input.optionsText ?? "")
+    .split("\n")
+    .map((option) => option.trim())
+    .filter(Boolean);
+  const payload = {
+    template_id: input.templateId,
+    field_key: input.fieldKey,
+    label: input.label,
+    field_type: input.fieldType,
+    placeholder: input.placeholder || null,
+    options,
+    settings: input.fieldType === "photo" ? { max_size_mb: input.maxSizeMb ?? 10 } : {},
+    is_required: input.isRequired,
+    is_active: input.isActive,
+    sort_order: input.sortOrder,
+  };
+  const query = input.fieldId
+    ? supabase.schema("surveyor").from("template_response_fields").update(payload).eq("id", input.fieldId).eq("template_id", input.templateId)
+    : supabase.schema("surveyor").from("template_response_fields").insert(payload);
+  const { error } = await query;
+  if (error) throw error;
+}
+
+export async function deleteResponseField(fieldId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.schema("surveyor").from("template_response_fields").delete().eq("id", fieldId);
   if (error) throw error;
 }
 

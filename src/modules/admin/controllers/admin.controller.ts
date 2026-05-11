@@ -12,10 +12,12 @@ import {
   getUserManagementData,
   removeIdentityFieldFromForm,
   removeQuestionFromForm,
+  removeResponseFieldFromForm,
   removeSectionFromForm,
   removeTemplateFromForm,
   saveIdentityFieldFromForm,
   saveQuestionFromForm,
+  saveResponseFieldFromForm,
   saveSectionFromForm,
   updateFormulaFromForm,
   updateTemplateSettingsFromForm,
@@ -100,6 +102,20 @@ export async function deleteIdentityFieldAction(formData: FormData) {
   await requireSuperAdmin();
   const result = await removeIdentityFieldFromForm(formData);
   if (!result.ok) throw new Error(result.message ?? "Gagal menghapus field identitas");
+  revalidatePath("/admin/templates");
+}
+
+export async function saveResponseFieldAction(formData: FormData) {
+  await requireSuperAdmin();
+  const result = await saveResponseFieldFromForm(formData);
+  if (!result.ok) throw new Error(result.message ?? "Gagal menyimpan field setelah kuesioner");
+  revalidatePath("/admin/templates");
+}
+
+export async function deleteResponseFieldAction(formData: FormData) {
+  await requireSuperAdmin();
+  const result = await removeResponseFieldFromForm(formData);
+  if (!result.ok) throw new Error(result.message ?? "Gagal menghapus field setelah kuesioner");
   revalidatePath("/admin/templates");
 }
 
