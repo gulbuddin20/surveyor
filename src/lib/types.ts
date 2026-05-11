@@ -159,6 +159,21 @@ export type SurveyResultDetail = {
   photos: SurveyPhoto[];
 };
 
+export type SurveyHistoryRow = SurveyResponse & {
+  survey_templates?: Pick<SurveyTemplate, "name"> | null;
+  msme_subjects?: Pick<MsmeSubject, "business_name" | "address"> | null;
+  profiles?: Pick<Profile, "full_name"> | null;
+};
+
+export type SurveyHistoryPage = {
+  rows: SurveyHistoryRow[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  query: string;
+};
+
 export type DashboardStats = {
   totalResponses: number;
   submittedResponses: number;

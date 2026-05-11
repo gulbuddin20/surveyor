@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { ClipboardList, FileText, LayoutDashboard, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, Users } from "lucide-react";
+import { ClipboardList, FileClock, FileText, LayoutDashboard, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Profile } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import { logoutAction } from "@/modules/auth/controllers/auth.controller";
 const userNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/surveys", label: "Mulai Survei", icon: ClipboardList },
+  { href: "/surveys/history", label: "Riwayat Survei", icon: FileClock },
 ];
 
 const adminNav = [
@@ -59,7 +60,9 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
         <nav className="mt-5 flex flex-1 flex-col gap-1.5">
           {nav.map((item) => {
             const Icon = item.icon;
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const active = item.href === "/surveys"
+              ? pathname === item.href || pathname === "/surveys/new"
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.href}

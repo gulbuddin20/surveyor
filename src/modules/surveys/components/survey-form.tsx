@@ -7,14 +7,23 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
-import type { SectionWithQuestions, TemplateDetail } from "@/lib/types";
+import type { SectionWithQuestions, SurveyResultDetail, TemplateDetail } from "@/lib/types";
 import { IdentityFieldsCard } from "@/modules/surveys/components/identity-fields-card";
 import { calculateSurveyProgress, calculateSurveyScore, flattenQuestions } from "@/modules/surveys/services/formula.service";
 import { submitSurveyAction } from "@/modules/surveys/controllers/survey.controller";
 import { useSurveyWizardStore } from "@/stores/survey-wizard.store";
 
-export function SurveyForm({ template }: { template: TemplateDetail }) {
+export function SurveyForm({
+  template,
+  mode = "create",
+  initialDetail,
+}: {
+  template: TemplateDetail;
+  mode?: "create" | "edit";
+  initialDetail?: SurveyResultDetail;
+}) {
   const selectedQuestionIds = useSurveyWizardStore((state) => state.selectedQuestionIds);
+  const setSelectedQuestionIds = useSurveyWizardStore((state) => state.setSelectedQuestionIds);
   const toggleQuestion = useSurveyWizardStore((state) => state.toggleQuestion);
   const reset = useSurveyWizardStore((state) => state.reset);
   const questions = useMemo(() => flattenQuestions(template.sections), [template]);
@@ -26,17 +35,22 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
   const progress = calculateSurveyProgress(questions.length, selectedQuestionIds);
 
   useEffect(() => {
+    if (initialDetail) {
+      setSelectedQuestionIds(initialDetail.answers.map((answer) => answer.question_id));
+      return;
+    }
     reset();
-  }, [reset, template.id]);
+  }, [initialDetail, reset, setSelectedQuestionIds, template.id]);
 
   return (
     <form action={submitSurveyAction} className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
       <input type="hidden" name="templateId" value={template.id} />
+      {initialDetail ? <input type="hidden" name="responseId" value={initialDetail.response.id} /> : null}
       {selectedQuestionIds.map((questionId) => (
         <input key={questionId} type="hidden" name="nonconformities" value={questionId} />
       ))}
       <div className="space-y-5">
-        <IdentityFieldsCard fields={template.identityFields} />
+        <IdentityFieldsCard fields={template.identityFields} values={initialDetail?.subject.metadata} />
         {template.sections.map((section) => (
           <SurveySectionCard
             key={section.id}
@@ -67,13 +81,19 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="notes">Catatan / kritik / saran</Label>
-              <Textarea id="notes" name="notes" placeholder="Catatan temuan, kritik, atau saran pembinaan" />
+              <Textarea
+                id="notes"
+                name="notes"
+                defaultValue={initialDetail?.response.notes ?? ""}
+                placeholder="Catatan temuan, kritik, atau saran pembinaan"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="recommendationNotes">Rekomendasi tindak lanjut</Label>
               <Textarea
                 id="recommendationNotes"
                 name="recommendationNotes"
+                defaultValue={initialDetail?.response.recommendation_notes ?? ""}
                 placeholder="Contoh: perbaiki fasilitas cuci tangan, lengkapi APD"
               />
             </div>
@@ -82,12 +102,17 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
             <Label htmlFor="photoCaption">Keterangan foto</Label>
             <Textarea id="photoCaption" name="photoCaption" placeholder="Keterangan umum untuk foto bukti" />
           </div>
+          {initialDetail?.photos.length ? (
+            <p className="mt-3 text-sm font-semibold text-[color:rgba(22,37,29,0.58)]">
+              {initialDetail.photos.length} foto lama tetap tersimpan. Upload foto baru hanya menambahkan bukti tambahan.
+            </p>
+          ) : null}
         </Card>
       </div>
       <aside className="xl:sticky xl:top-24 xl:h-fit">
         <Card>
           <CardHeader>
-            <CardTitle>Hasil sementara</CardTitle>
+            <CardTitle>{mode === "edit" ? "Perbarui hasil" : "Hasil sementara"}</CardTitle>
             <CardDescription>{template.name}</CardDescription>
           </CardHeader>
           <div className="space-y-4">
@@ -107,7 +132,7 @@ export function SurveyForm({ template }: { template: TemplateDetail }) {
             </p>
             <Button className="w-full" type="submit">
               <Save className="h-4 w-4" />
-              Simpan survei
+              {mode === "edit" ? "Simpan perubahan" : "Simpan survei"}
             </Button>
           </div>
         </Card>

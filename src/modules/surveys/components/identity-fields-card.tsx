@@ -4,7 +4,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { TemplateIdentityField } from "@/lib/types";
 
-export function IdentityFieldsCard({ fields }: { fields: TemplateIdentityField[] }) {
+export function IdentityFieldsCard({
+  fields,
+  values = {},
+}: {
+  fields: TemplateIdentityField[];
+  values?: Record<string, unknown>;
+}) {
   return (
     <Card>
       <CardHeader>
@@ -13,19 +19,20 @@ export function IdentityFieldsCard({ fields }: { fields: TemplateIdentityField[]
       </CardHeader>
       <div className="grid gap-4 md:grid-cols-2">
         {fields.map((field) => (
-          <IdentityFieldControl key={field.id} field={field} />
+          <IdentityFieldControl key={field.id} field={field} value={values[field.field_key]} />
         ))}
       </div>
     </Card>
   );
 }
 
-function IdentityFieldControl({ field }: { field: TemplateIdentityField }) {
+function IdentityFieldControl({ field, value }: { field: TemplateIdentityField; value?: unknown }) {
   const id = `identity-${field.field_key}`;
   const name = `identity.${field.field_key}`;
   const commonProps = {
     id,
     name,
+    defaultValue: typeof value === "string" ? value : "",
     required: field.is_required,
     placeholder: field.placeholder ?? undefined,
   };

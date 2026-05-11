@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { requireProfile } from "@/modules/auth/services/auth.service";
 import {
   getSurveyFormData,
+  getSurveyEditData,
+  getSurveyHistoryData,
   getSurveyResultData,
   getSurveyStartData,
   submitSurvey,
@@ -22,6 +24,16 @@ export async function loadSurveyFormController(templateId: string) {
 export async function loadSurveyResultController(responseId: string) {
   const profile = await requireProfile();
   return getSurveyResultData(profile, responseId);
+}
+
+export async function loadSurveyHistoryController(searchParams: { limit?: string; page?: string; q?: string }) {
+  const profile = await requireProfile();
+  return getSurveyHistoryData(profile, searchParams);
+}
+
+export async function loadSurveyEditController(responseId: string) {
+  const profile = await requireProfile();
+  return getSurveyEditData(profile, responseId);
 }
 
 export async function submitSurveyAction(formData: FormData) {

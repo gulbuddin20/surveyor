@@ -7,7 +7,11 @@ import {
   createSubject,
   getTemplateDetail,
   getSurveyResultDetail,
+  listSurveyHistory,
   listActiveTemplates,
+  replaceAnswers,
+  updateResponse,
+  updateSubject,
   uploadEvidencePhoto,
 } from "@/modules/surveys/repositories/survey.repository";
 import { calculateSurveyScore } from "@/modules/surveys/services/formula.service";
@@ -28,7 +32,31 @@ export async function getSurveyResultData(profile: Profile, responseId: string) 
   return { detail };
 }
 
+export async function getSurveyHistoryData(
+  profile: Profile,
+  searchParams: { limit?: string; page?: string; q?: string },
+) {
+  return {
+    history: await listSurveyHistory({
+      userId: profile.id,
+      isAdmin: profile.role === "super_admin",
+      page: Number(searchParams.page ?? 1),
+      limit: Number(searchParams.limit ?? 10),
+      query: searchParams.q ?? "",
+    }),
+  };
+}
+
+export async function getSurveyEditData(profile: Profile, responseId: string) {
+  const detail = await getSurveyResultDetail(responseId, profile.id, profile.role === "super_admin");
+  if (!detail) throw new Error("Hasil survei tidak ditemukan");
+  const template = await getTemplateDetail(detail.template.id);
+  if (!template) throw new Error("Template tidak ditemukan");
+  return { detail, template };
+}
+
 export async function submitSurvey(profile: Profile, formData: FormData) {
+  const responseId = String(formData.get("responseId") ?? "");
   const nonconformities = Array.from(new Set(formData.getAll("nonconformities").map(String)));
   const identityValues = Object.fromEntries(
     Array.from(formData.entries())
@@ -85,7 +113,7 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
     templatePassingScore: template.passing_score,
   });
 
-  const subject = await createSubject({
+  const subjectPayload = {
     owner_id: profile.id,
     business_name: businessName,
     owner_name: parsed.data.ownerName ?? null,
@@ -94,11 +122,10 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
     phone: parsed.data.phone ?? null,
     metadata: parsed.data.identityValues,
     updated_at: new Date().toISOString(),
-  });
+  };
 
-  const response = await createResponse({
+  const responsePayload = {
     template_id: template.id,
-    subject_id: subject.id,
     surveyor_id: profile.id,
     status: "submitted",
     total_nonconformity: score.totalNonconformity,
@@ -108,28 +135,48 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
     recommendation_notes: parsed.data.recommendationNotes ?? null,
     submitted_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-  });
+  } as const;
 
-  await createAnswers(
-    validNonconformities.map((questionId) => {
+  const answerRows = validNonconformities.map((questionId) => {
       const question = byId.get(questionId);
       if (!question) throw new Error("Pertanyaan tidak valid");
       return {
-        response_id: response.id,
+        response_id: responseId,
         question_id: question.id,
         is_nonconforming: true,
         value: { checked: true },
         score: Number(question.weight),
         notes: null,
       };
-    }),
-  );
+    });
+
+  let finalResponseId = responseId;
+  if (responseId) {
+    const existing = await getSurveyResultDetail(responseId, profile.id, profile.role === "super_admin");
+    if (!existing) return { ok: false, message: "Hasil survei tidak ditemukan" };
+    if (existing.template.id !== template.id) return { ok: false, message: "Template survei tidak sesuai" };
+    await updateSubject(existing.subject.id, subjectPayload);
+    const response = await updateResponse(responseId, {
+      ...responsePayload,
+      subject_id: existing.subject.id,
+    });
+    finalResponseId = response.id;
+    await replaceAnswers(response.id, answerRows.map((row) => ({ ...row, response_id: response.id })));
+  } else {
+    const subject = await createSubject(subjectPayload);
+    const response = await createResponse({
+      ...responsePayload,
+      subject_id: subject.id,
+    });
+    finalResponseId = response.id;
+    await createAnswers(answerRows.map((row) => ({ ...row, response_id: response.id })));
+  }
 
   const photoRows = await Promise.all(
     photoFiles.map(async (file) => ({
-      response_id: response.id,
+      response_id: finalResponseId,
       question_id: null,
-      storage_path: await uploadEvidencePhoto({ userId: profile.id, responseId: response.id, file }),
+      storage_path: await uploadEvidencePhoto({ userId: profile.id, responseId: finalResponseId, file }),
       file_name: file.name,
       mime_type: file.type,
       file_size_bytes: file.size,
@@ -138,7 +185,7 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
   );
   await createPhotos(photoRows);
 
-  return { ok: true, responseId: response.id };
+  return { ok: true, responseId: finalResponseId };
 }
 
 function flattenQuestions(sections: SectionWithQuestions[]): SurveyQuestion[] {
