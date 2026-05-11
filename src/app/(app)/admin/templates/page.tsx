@@ -4,9 +4,9 @@ import { loadTemplateEditorController } from "@/modules/admin/controllers/admin.
 export default async function AdminTemplatesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ template?: string }>;
+  searchParams: Promise<{ error?: string; template?: string }>;
 }) {
   const params = await searchParams;
   const { templates, detail } = await loadTemplateEditorController(params.template);
-  return <TemplateManagement templates={templates} detail={detail} />;
+  return <TemplateManagement templates={templates} detail={detail} error={params.error} />;
 }

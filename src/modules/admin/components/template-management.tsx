@@ -6,15 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { SurveyTemplate, TemplateAdminDetail } from "@/lib/types";
-import { createTemplateAction } from "@/modules/admin/controllers/admin.controller";
+import { createTemplateAction, deleteTemplateAction } from "@/modules/admin/controllers/admin.controller";
 import { TemplateEditor } from "@/modules/admin/components/template-editor";
 
 export function TemplateManagement({
   templates,
   detail,
+  error,
 }: {
   templates: SurveyTemplate[];
   detail: TemplateAdminDetail | null;
+  error?: string;
 }) {
   return (
     <div className="atlas-reveal space-y-6">
@@ -25,6 +27,11 @@ export function TemplateManagement({
           Kelola struktur bertingkat seperti formulir Food Truck: bagian, subbagian, pertanyaan, tipe input, dan bobot ketidaksesuaian.
         </p>
       </div>
+      {error ? (
+        <div className="rounded-2xl border border-[color:rgba(242,111,76,0.35)] bg-[color:rgba(242,111,76,0.1)] px-4 py-3 text-sm font-bold text-[var(--atlas-coral)]">
+          {error}
+        </div>
+      ) : null}
       <div className="grid gap-6 xl:grid-cols-[minmax(0,340px)_1fr]">
         <div className="space-y-4">
           <Card>
@@ -78,18 +85,31 @@ export function TemplateManagement({
 
 function TemplateLink({ template, active }: { template: SurveyTemplate; active: boolean }) {
   return (
-    <Link
-      href={`/admin/templates?template=${template.id}`}
-      className={`block rounded-2xl border p-3 transition hover:-translate-y-0.5 ${
+    <div
+      className={`rounded-2xl border p-3 transition hover:-translate-y-0.5 ${
         active ? "border-[var(--atlas-coral)] bg-[color:rgba(242,111,76,0.1)]" : "border-[color:rgba(22,37,29,0.1)] hover:bg-[var(--atlas-paper)]"
       }`}
     >
-      <p className="font-extrabold text-[var(--atlas-ink)]">{template.name}</p>
-      <div className="mt-2 flex flex-wrap gap-2">
-        <Badge>{template.status}</Badge>
-        <Badge className="bg-[color:rgba(22,37,29,0.08)] text-[var(--atlas-ink)]">/{Number(template.denominator)}</Badge>
-      </div>
-    </Link>
+      <Link href={`/admin/templates?template=${template.id}`} className="block">
+        <p className="font-extrabold text-[var(--atlas-ink)]">{template.name}</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Badge>{template.status}</Badge>
+          <Badge className="bg-[color:rgba(22,37,29,0.08)] text-[var(--atlas-ink)]">/{Number(template.denominator)}</Badge>
+        </div>
+      </Link>
+      <form action={deleteTemplateAction} className="mt-3">
+        <input type="hidden" name="templateId" value={template.id} />
+        <Button
+          type="submit"
+          variant="destructive"
+          size="sm"
+          className="min-h-9 px-3 py-1.5 text-xs"
+          title="Hanya super admin yang bisa menghapus template"
+        >
+          Hapus template
+        </Button>
+      </form>
+    </div>
   );
 }
 

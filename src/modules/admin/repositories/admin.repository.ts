@@ -141,6 +141,27 @@ export async function createTemplate(input: TemplateInput): Promise<SurveyTempla
   return template;
 }
 
+export async function deleteTemplate(templateId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { count, error: countError } = await supabase
+    .schema("surveyor")
+    .from("survey_responses")
+    .select("id", { count: "exact", head: true })
+    .eq("template_id", templateId);
+  if (countError) throw countError;
+
+  if (count && count > 0) {
+    throw new Error("Template sudah memiliki hasil survei dan tidak bisa dihapus langsung.");
+  }
+
+  const { error } = await supabase
+    .schema("surveyor")
+    .from("survey_templates")
+    .delete()
+    .eq("id", templateId);
+  if (error) throw error;
+}
+
 async function createDefaultIdentityFields(templateId: string) {
   const supabase = await createSupabaseServerClient();
   const defaults = [

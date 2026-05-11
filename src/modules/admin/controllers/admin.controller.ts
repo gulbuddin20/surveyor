@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireSuperAdmin } from "@/modules/auth/services/auth.service";
 import {
   createRegularUserFromForm,
@@ -12,6 +13,7 @@ import {
   removeIdentityFieldFromForm,
   removeQuestionFromForm,
   removeSectionFromForm,
+  removeTemplateFromForm,
   saveIdentityFieldFromForm,
   saveQuestionFromForm,
   saveSectionFromForm,
@@ -51,9 +53,26 @@ export async function createUserAction(formData: FormData) {
 
 export async function createTemplateAction(formData: FormData) {
   await requireSuperAdmin();
-  const result = await createTemplateFromForm(formData);
-  if (!result.ok) throw new Error(result.message ?? "Gagal membuat template");
+  const result = await createTemplateFromForm(formData).catch((error: unknown) => ({
+    ok: false,
+    message: error instanceof Error ? error.message : "Gagal membuat template",
+  }));
+  if (!result.ok) redirect(`/admin/templates?error=${encodeURIComponent(result.message ?? "Gagal membuat template")}`);
+  const templateId = "templateId" in result ? result.templateId : null;
+  if (!templateId) redirect("/admin/templates?error=Template%20dibuat%20tetapi%20ID%20tidak%20ditemukan");
   revalidatePath("/admin/templates");
+  redirect(`/admin/templates?template=${templateId}`);
+}
+
+export async function deleteTemplateAction(formData: FormData) {
+  await requireSuperAdmin();
+  const result = await removeTemplateFromForm(formData).catch((error: unknown) => ({
+    ok: false,
+    message: error instanceof Error ? error.message : "Gagal menghapus template",
+  }));
+  if (!result.ok) redirect(`/admin/templates?error=${encodeURIComponent(result.message ?? "Gagal menghapus template")}`);
+  revalidatePath("/admin/templates");
+  redirect("/admin/templates");
 }
 
 export async function updateFormulaAction(formData: FormData) {

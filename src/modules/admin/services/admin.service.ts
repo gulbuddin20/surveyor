@@ -13,6 +13,7 @@ import {
   deleteIdentityField,
   deleteQuestion,
   deleteSection,
+  deleteTemplate,
   getTemplateAdminDetail,
   listFormulas,
   listUsers,
@@ -69,8 +70,15 @@ export async function createTemplateFromForm(formData: FormData) {
     status: formData.get("status"),
   });
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
-  await createTemplate(parsed.data);
-  return { ok: true, message: "Template dibuat" };
+  const template = await createTemplate(parsed.data);
+  return { ok: true, message: "Template dibuat", templateId: template.id };
+}
+
+export async function removeTemplateFromForm(formData: FormData) {
+  const templateId = String(formData.get("templateId") ?? "");
+  if (!templateId) return { ok: false, message: "Template tidak valid" };
+  await deleteTemplate(templateId);
+  return { ok: true, message: "Template dihapus" };
 }
 
 export async function updateTemplateSettingsFromForm(formData: FormData) {
