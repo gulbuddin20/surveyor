@@ -12,6 +12,7 @@ import type {
   TemplateIdentityField,
   TemplateDetail,
   SurveyResultDetail,
+  SurveyHistoryPage,
 } from "@/lib/types";
 
 function buildSectionTree(sections: SurveySection[], questions: SurveyQuestion[]): SectionWithQuestions[] {
@@ -162,6 +163,32 @@ export async function createResponse(input: Omit<SurveyResponse, "id" | "created
   return data as SurveyResponse;
 }
 
+export async function updateSubject(subjectId: string, input: Partial<Omit<MsmeSubject, "id" | "created_at">>) {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .schema("surveyor")
+    .from("msme_subjects")
+    .update(input)
+    .eq("id", subjectId)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as MsmeSubject;
+}
+
+export async function updateResponse(responseId: string, input: Partial<Omit<SurveyResponse, "id" | "created_at">>) {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .schema("surveyor")
+    .from("survey_responses")
+    .update(input)
+    .eq("id", responseId)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as SurveyResponse;
+}
+
 export async function createAnswers(inputs: Array<Omit<SurveyAnswer, "id" | "created_at">>) {
   if (inputs.length === 0) return [];
   const supabase = await createSupabaseServerClient();
@@ -172,6 +199,17 @@ export async function createAnswers(inputs: Array<Omit<SurveyAnswer, "id" | "cre
     .select("*");
   if (error) throw error;
   return (data ?? []) as SurveyAnswer[];
+}
+
+export async function replaceAnswers(responseId: string, inputs: Array<Omit<SurveyAnswer, "id" | "created_at">>) {
+  const supabase = await createSupabaseServerClient();
+  const { error: deleteError } = await supabase
+    .schema("surveyor")
+    .from("survey_answers")
+    .delete()
+    .eq("response_id", responseId);
+  if (deleteError) throw deleteError;
+  return createAnswers(inputs);
 }
 
 export async function uploadEvidencePhoto({
@@ -245,6 +283,50 @@ export async function getSurveyResultDetail(responseId: string, userId: string, 
     subject: subject as SurveyResultDetail["subject"],
     answers: (answers ?? []) as SurveyResultDetail["answers"],
     photos: (photos ?? []) as SurveyPhoto[],
+  };
+}
+
+export async function listSurveyHistory({
+  userId,
+  isAdmin,
+  page,
+  limit,
+  query,
+}: {
+  userId: string;
+  isAdmin: boolean;
+  page: number;
+  limit: number;
+  query: string;
+}): Promise<SurveyHistoryPage> {
+  const supabase = await createSupabaseServerClient();
+  const safePage = Math.max(1, page);
+  const safeLimit = [10, 20, 50].includes(limit) ? limit : 10;
+  const from = (safePage - 1) * safeLimit;
+  const to = from + safeLimit - 1;
+
+  let dbQuery = supabase
+    .schema("surveyor")
+    .from("survey_responses")
+    .select("*, survey_templates(name), msme_subjects(business_name, address), profiles(full_name)", {
+      count: "exact",
+    })
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  if (!isAdmin) dbQuery = dbQuery.eq("surveyor_id", userId);
+  const trimmedQuery = query.trim();
+
+  const { data, error, count } = await dbQuery;
+  if (error) throw error;
+  const total = count ?? 0;
+  return {
+    rows: (data ?? []) as SurveyHistoryPage["rows"],
+    page: safePage,
+    limit: safeLimit,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / safeLimit)),
+    query: trimmedQuery,
   };
 }
 
