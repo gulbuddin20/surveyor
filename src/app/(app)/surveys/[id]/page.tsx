@@ -9,6 +9,9 @@ export default async function SurveyResultPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const { detail } = await loadSurveyResultController(id);
   const identityValues = detail.subject.metadata;
+  const responseValues = detail.response.response_values ?? {};
+  const nonPhotoResponseFields = detail.responseFields.filter((field) => field.field_type !== "photo");
+  const photoFieldLabels = new Map(detail.responseFields.map((field) => [field.field_key, field.label]));
   return (
     <div className="atlas-reveal mx-auto max-w-5xl space-y-5">
       <Card>
@@ -33,27 +36,34 @@ export default async function SurveyResultPage({ params }: { params: Promise<{ i
         </div>
         <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
           <Button asChild><a href={`/surveys/${id}/export`}>Export PDF</a></Button>
+          <Button asChild variant="secondary"><Link href={`/surveys/${id}/edit`}>Edit survei</Link></Button>
           <Button asChild variant="outline"><Link href="/dashboard">Dashboard</Link></Button>
           <Button asChild variant="outline"><Link href="/surveys">Survei lagi</Link></Button>
         </div>
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Identitas & catatan</CardTitle>
+          <CardTitle>Identitas</CardTitle>
           <CardDescription>Disubmit {formatDate(detail.response.submitted_at)}</CardDescription>
         </CardHeader>
         <dl className="grid gap-3 md:grid-cols-2">
-          {Object.entries(identityValues).map(([key, value]) => (
-            <div key={key} className="rounded-2xl bg-[color:rgba(255,249,234,0.52)] p-3">
-              <dt className="text-xs font-black uppercase tracking-wide text-[color:rgba(22,37,29,0.42)]">{key.replaceAll("_", " ")}</dt>
-              <dd className="mt-1 text-sm text-[var(--atlas-ink)]">{String(value || "-")}</dd>
-            </div>
-          ))}
+          {detail.identityFields.map((field) => {
+            const value = identityValues[field.field_key];
+            return (
+              <div key={field.id} className="rounded-2xl bg-[color:rgba(255,249,234,0.52)] p-3">
+                <dt className="text-xs font-black uppercase tracking-wide text-[color:rgba(22,37,29,0.42)]">{field.label}</dt>
+                <dd className="mt-1 text-sm text-[var(--atlas-ink)]">{String(value || "-")}</dd>
+              </div>
+            );
+          })}
         </dl>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <NoteBlock title="Catatan / kritik / saran" value={detail.response.notes} />
-          <NoteBlock title="Rekomendasi tindak lanjut" value={detail.response.recommendation_notes} />
-        </div>
+        {nonPhotoResponseFields.length ? (
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {nonPhotoResponseFields.map((field) => (
+              <NoteBlock key={field.id} title={field.label} value={String(responseValues[field.field_key] || "")} />
+            ))}
+          </div>
+        ) : null}
       </Card>
       <Card>
         <CardHeader>
@@ -73,7 +83,8 @@ export default async function SurveyResultPage({ params }: { params: Promise<{ i
           <div className="grid gap-3 md:grid-cols-2">
             {detail.photos.map((photo) => (
               <div key={photo.id} className="rounded-2xl border border-[color:rgba(22,37,29,0.1)] bg-[var(--atlas-paper)] p-3 text-sm text-[color:rgba(22,37,29,0.62)]">
-                <p className="font-extrabold text-[var(--atlas-ink)]">{photo.file_name ?? "Foto bukti"}</p>
+                <p className="font-extrabold text-[var(--atlas-ink)]">{photoFieldLabels.get(photo.field_key ?? "") ?? "Foto bukti"}</p>
+                <p>{photo.file_name ?? "Foto bukti"}</p>
                 <p>{photo.caption ?? "Tanpa keterangan"}</p>
                 <p className="mt-1 text-xs text-[color:rgba(22,37,29,0.4)]">{photo.storage_path}</p>
               </div>

@@ -11,6 +11,7 @@ export type QuestionType =
   | "checkbox"
   | "photo";
 export type IdentityFieldType = "text" | "textarea" | "number" | "date" | "time" | "select";
+export type TemplateResponseFieldType = IdentityFieldType | "photo";
 
 export type Profile = {
   id: string;
@@ -44,6 +45,22 @@ export type TemplateIdentityField = {
   field_type: IdentityFieldType;
   placeholder: string | null;
   options: string[];
+  is_required: boolean;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TemplateResponseField = {
+  id: string;
+  template_id: string;
+  field_key: string;
+  label: string;
+  field_type: TemplateResponseFieldType;
+  placeholder: string | null;
+  options: string[];
+  settings: Record<string, unknown>;
   is_required: boolean;
   is_active: boolean;
   sort_order: number;
@@ -107,6 +124,7 @@ export type SurveyResponse = {
   result_label: string;
   notes: string | null;
   recommendation_notes: string | null;
+  response_values: Record<string, unknown>;
   submitted_at: string | null;
   updated_at: string;
   created_at: string;
@@ -126,6 +144,7 @@ export type SurveyPhoto = {
   id: string;
   response_id: string;
   question_id: string | null;
+  field_key: string | null;
   storage_path: string;
   file_name: string | null;
   mime_type: string | null;
@@ -137,6 +156,7 @@ export type SurveyPhoto = {
 export type TemplateDetail = SurveyTemplate & {
   formula: FormulaRule | null;
   identityFields: TemplateIdentityField[];
+  responseFields: TemplateResponseField[];
   sections: SectionWithQuestions[];
 };
 
@@ -147,6 +167,7 @@ export type SectionWithQuestions = SurveySection & {
 
 export type TemplateAdminDetail = SurveyTemplate & {
   identityFields: TemplateIdentityField[];
+  responseFields: TemplateResponseField[];
   sections: SectionWithQuestions[];
   flatSections: SurveySection[];
 };
@@ -155,6 +176,8 @@ export type SurveyResultDetail = {
   response: SurveyResponse;
   template: SurveyTemplate;
   subject: MsmeSubject;
+  identityFields: TemplateIdentityField[];
+  responseFields: TemplateResponseField[];
   answers: Array<SurveyAnswer & { survey_questions?: SurveyQuestion | null }>;
   photos: SurveyPhoto[];
 };

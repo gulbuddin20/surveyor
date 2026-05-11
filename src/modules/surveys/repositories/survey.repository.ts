@@ -13,6 +13,7 @@ import type {
   TemplateDetail,
   SurveyResultDetail,
   SurveyHistoryPage,
+  TemplateResponseField,
 } from "@/lib/types";
 
 function buildSectionTree(sections: SurveySection[], questions: SurveyQuestion[]): SectionWithQuestions[] {
@@ -94,6 +95,7 @@ export async function getTemplateDetail(templateId: string): Promise<TemplateDet
     { data: questions, error: questionError },
     { data: formula, error: formulaError },
     { data: identityFields, error: identityFieldError },
+    { data: responseFields, error: responseFieldError },
   ] = await Promise.all([
     supabase
       .schema("surveyor")
@@ -123,11 +125,19 @@ export async function getTemplateDetail(templateId: string): Promise<TemplateDet
       .eq("template_id", templateId)
       .eq("is_active", true)
       .order("sort_order"),
+    supabase
+      .schema("surveyor")
+      .from("template_response_fields")
+      .select("*")
+      .eq("template_id", templateId)
+      .eq("is_active", true)
+      .order("sort_order"),
   ]);
   if (sectionError) throw sectionError;
   if (questionError) throw questionError;
   if (formulaError) throw formulaError;
   if (identityFieldError) throw identityFieldError;
+  if (responseFieldError) throw responseFieldError;
 
   const questionRows = (questions ?? []) as SurveyQuestion[];
 
@@ -135,6 +145,7 @@ export async function getTemplateDetail(templateId: string): Promise<TemplateDet
     ...(template as SurveyTemplate),
     formula: (formula as FormulaRule | null) ?? null,
     identityFields: (identityFields ?? []) as TemplateIdentityField[],
+    responseFields: (responseFields ?? []) as TemplateResponseField[],
     sections: buildSectionTree((sections ?? []) as SurveySection[], questionRows),
   };
 }
@@ -259,11 +270,25 @@ export async function getSurveyResultDetail(responseId: string, userId: string, 
   const [
     { data: template, error: templateError },
     { data: subject, error: subjectError },
+    { data: identityFields, error: identityFieldError },
+    { data: responseFields, error: responseFieldError },
     { data: answers, error: answerError },
     { data: photos, error: photoError },
   ] = await Promise.all([
     supabase.schema("surveyor").from("survey_templates").select("*").eq("id", response.template_id).single(),
     supabase.schema("surveyor").from("msme_subjects").select("*").eq("id", response.subject_id).single(),
+    supabase
+      .schema("surveyor")
+      .from("template_identity_fields")
+      .select("*")
+      .eq("template_id", response.template_id)
+      .order("sort_order"),
+    supabase
+      .schema("surveyor")
+      .from("template_response_fields")
+      .select("*")
+      .eq("template_id", response.template_id)
+      .order("sort_order"),
     supabase
       .schema("surveyor")
       .from("survey_answers")
@@ -274,6 +299,8 @@ export async function getSurveyResultDetail(responseId: string, userId: string, 
   ]);
   if (templateError) throw templateError;
   if (subjectError) throw subjectError;
+  if (identityFieldError) throw identityFieldError;
+  if (responseFieldError) throw responseFieldError;
   if (answerError) throw answerError;
   if (photoError) throw photoError;
 
@@ -281,6 +308,8 @@ export async function getSurveyResultDetail(responseId: string, userId: string, 
     response: response as SurveyResponse,
     template: template as SurveyTemplate,
     subject: subject as SurveyResultDetail["subject"],
+    identityFields: (identityFields ?? []) as TemplateIdentityField[],
+    responseFields: (responseFields ?? []) as TemplateResponseField[],
     answers: (answers ?? []) as SurveyResultDetail["answers"],
     photos: (photos ?? []) as SurveyPhoto[],
   };

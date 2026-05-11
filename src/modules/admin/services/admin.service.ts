@@ -2,6 +2,7 @@ import {
   formulaSchema,
   identityFieldSchema,
   questionSchema,
+  responseFieldSchema,
   sectionSchema,
   templateSchema,
   templateSettingsSchema,
@@ -12,6 +13,7 @@ import {
   createUser,
   deleteIdentityField,
   deleteQuestion,
+  deleteResponseField,
   deleteSection,
   deleteTemplate,
   getTemplateAdminDetail,
@@ -21,6 +23,7 @@ import {
   updateTemplateSettings,
   upsertIdentityField,
   upsertQuestion,
+  upsertResponseField,
   upsertSection,
 } from "@/modules/admin/repositories/admin.repository";
 import { listAllTemplates } from "@/modules/surveys/repositories/survey.repository";
@@ -114,6 +117,32 @@ export async function removeIdentityFieldFromForm(formData: FormData) {
   if (!fieldId) return { ok: false, message: "Field identitas tidak valid" };
   await deleteIdentityField(fieldId);
   return { ok: true, message: "Field identitas dihapus" };
+}
+
+export async function saveResponseFieldFromForm(formData: FormData) {
+  const parsed = responseFieldSchema.safeParse({
+    templateId: formData.get("templateId"),
+    fieldId: formData.get("fieldId") || undefined,
+    fieldKey: formData.get("fieldKey"),
+    label: formData.get("label"),
+    fieldType: formData.get("fieldType") || "textarea",
+    placeholder: formData.get("placeholder") || undefined,
+    optionsText: formData.get("optionsText") || undefined,
+    maxSizeMb: formData.get("maxSizeMb") || undefined,
+    isRequired: formData.get("isRequired") === "on",
+    isActive: formData.get("isActive") === "on",
+    sortOrder: formData.get("sortOrder"),
+  });
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
+  await upsertResponseField(parsed.data);
+  return { ok: true, message: "Field setelah kuesioner disimpan" };
+}
+
+export async function removeResponseFieldFromForm(formData: FormData) {
+  const fieldId = String(formData.get("fieldId") ?? "");
+  if (!fieldId) return { ok: false, message: "Field setelah kuesioner tidak valid" };
+  await deleteResponseField(fieldId);
+  return { ok: true, message: "Field setelah kuesioner dihapus" };
 }
 
 export async function updateFormulaFromForm(formData: FormData) {

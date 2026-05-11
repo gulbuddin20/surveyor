@@ -63,15 +63,20 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
       .filter(([key]) => key.startsWith("identity."))
       .map(([key, value]) => [key.replace("identity.", ""), String(value)]),
   );
+  const responseValues = Object.fromEntries(
+    Array.from(formData.entries())
+      .filter(([key]) => key.startsWith("response."))
+      .map(([key, value]) => [key.replace("response.", ""), String(value)]),
+  );
   const parsed = surveySubmissionSchema.safeParse({
     templateId: formData.get("templateId"),
+    responseId: responseId || undefined,
     businessName: identityValues.business_name || Object.values(identityValues).find((value) => value.trim()),
     ownerName: identityValues.owner_name,
     address: identityValues.address,
     phone: identityValues.phone,
     identityValues,
-    notes: formData.get("notes"),
-    recommendationNotes: formData.get("recommendationNotes"),
+    responseValues,
     nonconformities,
   });
 
@@ -81,8 +86,7 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
 
   const template = await getTemplateDetail(parsed.data.templateId);
   if (!template) return { ok: false, message: "Template tidak ditemukan" };
-  const businessName = parsed.data.businessName?.trim();
-  if (!businessName) return { ok: false, message: "Minimal satu field identitas wajib diisi" };
+  const businessName = parsed.data.businessName?.trim() || "Tanpa nama tempat";
 
   for (const field of template.identityFields) {
     if (field.is_required && !parsed.data.identityValues[field.field_key]?.trim()) {
@@ -90,15 +94,34 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
     }
   }
 
-  const photoCaption = String(formData.get("photoCaption") ?? "").slice(0, 500) || null;
-  const photoFiles = formData
-    .getAll("evidencePhotos")
-    .filter((value): value is File => value instanceof File && value.size > 0);
-  const maxBytes = Number(template.photo_max_size_mb) * 1024 * 1024;
+  for (const field of template.responseFields) {
+    if (field.field_type !== "photo" && field.is_required && !parsed.data.responseValues[field.field_key]?.trim()) {
+      return { ok: false, message: `${field.label} wajib diisi` };
+    }
+  }
+
   const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-  for (const file of photoFiles) {
-    if (!allowedTypes.has(file.type)) return { ok: false, message: "Foto bukti harus JPG, PNG, atau WebP" };
-    if (file.size > maxBytes) return { ok: false, message: `Ukuran foto maksimal ${template.photo_max_size_mb} MB` };
+  const photoInputs = template.responseFields
+    .filter((field) => field.field_type === "photo")
+    .map((field) => {
+      const files = formData
+        .getAll(`responseFiles.${field.field_key}`)
+        .filter((value): value is File => value instanceof File && value.size > 0);
+      const maxSizeMb = typeof field.settings?.max_size_mb === "number"
+        ? field.settings.max_size_mb
+        : Number(template.photo_max_size_mb);
+      return { field, files, maxSizeMb };
+    });
+
+  for (const input of photoInputs) {
+    if (input.field.is_required && !responseId && input.files.length === 0) {
+      return { ok: false, message: `${input.field.label} wajib diunggah` };
+    }
+    const maxBytes = input.maxSizeMb * 1024 * 1024;
+    for (const file of input.files) {
+      if (!allowedTypes.has(file.type)) return { ok: false, message: `${input.field.label} harus JPG, PNG, atau WebP` };
+      if (file.size > maxBytes) return { ok: false, message: `Ukuran ${input.field.label} maksimal ${input.maxSizeMb} MB` };
+    }
   }
 
   const questions = flattenQuestions(template.sections);
@@ -131,8 +154,9 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
     total_nonconformity: score.totalNonconformity,
     score: score.score,
     result_label: score.resultLabel,
-    notes: parsed.data.notes ?? null,
-    recommendation_notes: parsed.data.recommendationNotes ?? null,
+    notes: parsed.data.responseValues.notes ?? null,
+    recommendation_notes: parsed.data.responseValues.recommendation_notes ?? null,
+    response_values: parsed.data.responseValues,
     submitted_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   } as const;
@@ -173,14 +197,15 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
   }
 
   const photoRows = await Promise.all(
-    photoFiles.map(async (file) => ({
+    photoInputs.flatMap((input) => input.files.map((file) => ({ file, fieldKey: input.field.field_key }))).map(async ({ file, fieldKey }) => ({
       response_id: finalResponseId,
       question_id: null,
+      field_key: fieldKey,
       storage_path: await uploadEvidencePhoto({ userId: profile.id, responseId: finalResponseId, file }),
       file_name: file.name,
       mime_type: file.type,
       file_size_bytes: file.size,
-      caption: photoCaption,
+      caption: null,
     })),
   );
   await createPhotos(photoRows);
