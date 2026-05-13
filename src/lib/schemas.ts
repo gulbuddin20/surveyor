@@ -105,6 +105,16 @@ export const templateReorderSchema = z.object({
   orderedIds: z.array(z.uuid()).min(1),
 });
 
+export const questionSectionOrderSchema = z.object({
+  sectionId: z.uuid(),
+  orderedIds: z.array(z.uuid()),
+});
+
+export const questionSectionOrdersSchema = z.object({
+  templateId: z.uuid(),
+  sections: z.array(questionSectionOrderSchema).min(1),
+});
+
 export const surveySubmissionSchema = z.object({
   templateId: z.uuid(),
   responseId: z.uuid().optional(),
@@ -124,6 +134,7 @@ export type IdentityFieldInput = z.infer<typeof identityFieldSchema>;
 export type ResponseFieldInput = z.infer<typeof responseFieldSchema>;
 export type TemplateSettingsInput = z.infer<typeof templateSettingsSchema>;
 export type TemplateReorderInput = z.infer<typeof templateReorderSchema>;
+export type QuestionSectionOrdersInput = z.infer<typeof questionSectionOrdersSchema>;
 export type SectionInput = z.infer<typeof sectionSchema>;
 export type QuestionInput = z.infer<typeof questionSchema>;
 export type FormulaInput = z.infer<typeof formulaSchema>;

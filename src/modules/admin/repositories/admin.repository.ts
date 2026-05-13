@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   FormulaInput,
   IdentityFieldInput,
+  QuestionSectionOrdersInput,
   QuestionInput,
   ResponseFieldInput,
   SectionInput,
@@ -502,4 +503,57 @@ export async function reorderQuestions(input: TemplateReorderInput) {
       .eq("template_id", input.templateId);
     if (updateError) throw updateError;
   }));
+}
+
+export async function reorderQuestionsAcrossSections(input: QuestionSectionOrdersInput) {
+  const supabase = await createSupabaseServerClient();
+  const sectionIds = input.sections.map((section) => section.sectionId);
+  const orderedIds = input.sections.flatMap((section) => section.orderedIds);
+
+  if (new Set(sectionIds).size !== sectionIds.length) {
+    throw new Error("Scope bagian berisi duplikat.");
+  }
+  if (new Set(orderedIds).size !== orderedIds.length) {
+    throw new Error("Urutan pertanyaan berisi item duplikat.");
+  }
+
+  const [
+    { data: sections, error: sectionError },
+    { data: questions, error: questionError },
+  ] = await Promise.all([
+    supabase
+      .schema("surveyor")
+      .from("survey_sections")
+      .select("id")
+      .eq("template_id", input.templateId)
+      .in("id", sectionIds),
+    supabase
+      .schema("surveyor")
+      .from("survey_questions")
+      .select("id")
+      .eq("template_id", input.templateId)
+      .not("section_id", "is", null),
+  ]);
+  if (sectionError) throw sectionError;
+  if (questionError) throw questionError;
+
+  const validSectionIds = new Set((sections ?? []).map((section) => section.id));
+  if (sectionIds.some((sectionId) => !validSectionIds.has(sectionId))) {
+    throw new Error("Bagian tujuan tidak valid.");
+  }
+
+  assertExactReorderScope(orderedIds, (questions ?? []).map((question) => question.id));
+
+  await Promise.all(input.sections.flatMap((section) => section.orderedIds.map(async (id, index) => {
+    const { error: updateError } = await supabase
+      .schema("surveyor")
+      .from("survey_questions")
+      .update({
+        section_id: section.sectionId,
+        sort_order: sortOrderForIndex(index),
+      })
+      .eq("id", id)
+      .eq("template_id", input.templateId);
+    if (updateError) throw updateError;
+  })));
 }
