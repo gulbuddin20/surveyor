@@ -2,7 +2,7 @@
 
 import { ArrowDown, ArrowUp, GripVertical } from "lucide-react";
 import type { PointerEvent, ReactNode } from "react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +22,18 @@ type SortableAdminListProps = {
 
 const TOUCH_LONG_PRESS_MS = 2000;
 const TOUCH_CANCEL_DISTANCE = 12;
+const INTERACTIVE_SELECTOR = [
+  "a",
+  "button",
+  "input",
+  "label",
+  "select",
+  "summary",
+  "textarea",
+  "[contenteditable='true']",
+  "[role='button']",
+  "[data-no-card-drag]",
+].join(",");
 
 function moveItem<T>(items: T[], fromIndex: number, toIndex: number) {
   const next = [...items];
@@ -35,6 +47,21 @@ function areOrdersEqual(left: SortableAdminItem[], right: SortableAdminItem[]) {
   return left.length === right.length && left.every((item, index) => item.id === right[index]?.id);
 }
 
+function canStartCardDrag(target: EventTarget | null) {
+  return target instanceof Element && !target.closest(INTERACTIVE_SELECTOR);
+}
+
+function findSortableRow(target: Element | null, listId: string) {
+  let current: Element | null = target;
+  while (current) {
+    if (current instanceof HTMLElement && current.dataset.sortableId && current.dataset.sortableListId === listId) {
+      return current;
+    }
+    current = current.parentElement;
+  }
+  return null;
+}
+
 export function SortableAdminList({
   items,
   empty,
@@ -46,6 +73,7 @@ export function SortableAdminList({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const listId = useId();
   const latestItems = useRef(items);
   const dragState = useRef<{
     pointerId: number;
@@ -54,7 +82,7 @@ export function SortableAdminList({
     activated: boolean;
     hasChanged: boolean;
     timer: ReturnType<typeof setTimeout> | null;
-    handle: HTMLElement | null;
+    surface: HTMLElement | null;
   } | null>(null);
 
   useEffect(() => {
@@ -83,10 +111,11 @@ export function SortableAdminList({
     setActiveId(id);
   };
 
-  const handlePointerDown = (event: PointerEvent<HTMLButtonElement>, id: string) => {
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>, id: string) => {
     if (event.button !== 0) return;
+    if (!canStartCardDrag(event.target)) return;
 
-    const handle = event.currentTarget;
+    const surface = event.currentTarget;
     dragState.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -94,9 +123,9 @@ export function SortableAdminList({
       activated: false,
       hasChanged: false,
       timer: null,
-      handle,
+      surface,
     };
-    handle.setPointerCapture(event.pointerId);
+    surface.setPointerCapture(event.pointerId);
 
     if (event.pointerType === "touch" || event.pointerType === "pen") {
       dragState.current.timer = setTimeout(() => activateDrag(id), TOUCH_LONG_PRESS_MS);
@@ -107,7 +136,7 @@ export function SortableAdminList({
     activateDrag(id);
   };
 
-  const handlePointerMove = (event: PointerEvent<HTMLButtonElement>, id: string) => {
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>, id: string) => {
     const current = dragState.current;
     if (!current || current.pointerId !== event.pointerId) return;
 
@@ -116,8 +145,8 @@ export function SortableAdminList({
       const deltaY = Math.abs(event.clientY - current.startY);
       if (deltaX > TOUCH_CANCEL_DISTANCE || deltaY > TOUCH_CANCEL_DISTANCE) {
         if (current.timer) clearTimeout(current.timer);
-        if (current.handle?.hasPointerCapture(event.pointerId)) {
-          current.handle.releasePointerCapture(event.pointerId);
+        if (current.surface?.hasPointerCapture(event.pointerId)) {
+          current.surface.releasePointerCapture(event.pointerId);
         }
         dragState.current = null;
       }
@@ -126,7 +155,7 @@ export function SortableAdminList({
 
     event.preventDefault();
     const target = document.elementFromPoint(event.clientX, event.clientY);
-    const targetRow = target?.closest<HTMLElement>("[data-sortable-id]");
+    const targetRow = target instanceof Element ? findSortableRow(target, listId) : null;
     const overId = targetRow?.dataset.sortableId;
     if (!overId || overId === id) return;
 
@@ -141,12 +170,12 @@ export function SortableAdminList({
     });
   };
 
-  const finishDrag = (event: PointerEvent<HTMLButtonElement>) => {
+  const finishDrag = (event: PointerEvent<HTMLDivElement>) => {
     const current = dragState.current;
     if (!current || current.pointerId !== event.pointerId) return;
     if (current.timer) clearTimeout(current.timer);
-    if (current.handle?.hasPointerCapture(event.pointerId)) {
-      current.handle.releasePointerCapture(event.pointerId);
+    if (current.surface?.hasPointerCapture(event.pointerId)) {
+      current.surface.releasePointerCapture(event.pointerId);
     }
     dragState.current = null;
     setActiveId(null);
@@ -173,7 +202,7 @@ export function SortableAdminList({
   return (
     <div className={cn("space-y-3", className)}>
       <div className="flex items-center justify-between gap-3 text-xs font-bold uppercase tracking-[0.12em] text-[color:rgba(22,37,29,0.48)]">
-        <span>Drag untuk mengatur urutan</span>
+        <span>Drag kartu untuk mengatur urutan</span>
         {isPending ? <span>Menyimpan...</span> : null}
       </div>
       {error ? (
@@ -185,24 +214,26 @@ export function SortableAdminList({
         <div
           key={item.id}
           data-sortable-id={item.id}
+          data-sortable-list-id={listId}
           className={cn(
-            "grid gap-3 rounded-[1.75rem] transition duration-200 md:grid-cols-[auto_1fr]",
-            activeId === item.id ? "scale-[0.99] opacity-80" : null,
+            "group grid cursor-grab gap-3 rounded-[1.75rem] transition duration-200 [touch-action:pan-y] md:grid-cols-[auto_1fr]",
+            activeId === item.id
+              ? "z-10 scale-[1.01] cursor-grabbing ring-2 ring-[color:rgba(242,111,76,0.36)] shadow-[0_22px_48px_rgba(22,37,29,0.18)]"
+              : "hover:shadow-[0_14px_34px_rgba(22,37,29,0.08)]",
             itemClassName,
           )}
+          onPointerDown={(event) => handlePointerDown(event, item.id)}
+          onPointerMove={(event) => handlePointerMove(event, item.id)}
+          onPointerUp={finishDrag}
+          onPointerCancel={finishDrag}
         >
           <div className="flex items-center gap-2 md:flex-col md:justify-start">
-            <button
-              type="button"
-              aria-label={`Drag ${item.label}`}
-              className="inline-flex min-h-11 min-w-11 cursor-grab touch-none items-center justify-center rounded-2xl border border-[color:rgba(22,37,29,0.16)] bg-[color:rgba(255,249,234,0.82)] text-[var(--atlas-jungle)] shadow-[0_10px_24px_rgba(22,37,29,0.08)] transition hover:-translate-y-0.5 hover:border-[var(--atlas-coral)] active:cursor-grabbing"
-              onPointerDown={(event) => handlePointerDown(event, item.id)}
-              onPointerMove={(event) => handlePointerMove(event, item.id)}
-              onPointerUp={finishDrag}
-              onPointerCancel={finishDrag}
+            <div
+              aria-hidden="true"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl border border-[color:rgba(22,37,29,0.16)] bg-[color:rgba(255,249,234,0.82)] text-[var(--atlas-jungle)] shadow-[0_10px_24px_rgba(22,37,29,0.08)] transition group-hover:border-[var(--atlas-coral)]"
             >
               <GripVertical className="h-5 w-5" />
-            </button>
+            </div>
             <div className="flex gap-1 md:flex-col">
               <Button
                 type="button"
