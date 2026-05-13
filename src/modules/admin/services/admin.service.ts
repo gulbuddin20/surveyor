@@ -2,6 +2,7 @@ import {
   formulaSchema,
   identityFieldSchema,
   questionSchema,
+  questionSectionOrdersSchema,
   responseFieldSchema,
   sectionSchema,
   templateSchema,
@@ -22,6 +23,7 @@ import {
   listUsers,
   reorderIdentityFields,
   reorderQuestions,
+  reorderQuestionsAcrossSections,
   reorderResponseFields,
   reorderSections,
   updateFormula,
@@ -240,4 +242,14 @@ export async function reorderQuestionsFromInput(templateId: string, sectionId: s
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
   await reorderQuestions(parsed.data);
   return { ok: true, message: "Urutan pertanyaan disimpan" };
+}
+
+export async function reorderQuestionSectionsFromInput(
+  templateId: string,
+  sections: Array<{ sectionId: string; orderedIds: string[] }>,
+) {
+  const parsed = questionSectionOrdersSchema.safeParse({ templateId, sections });
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
+  await reorderQuestionsAcrossSections(parsed.data);
+  return { ok: true, message: "Urutan dan bagian pertanyaan disimpan" };
 }

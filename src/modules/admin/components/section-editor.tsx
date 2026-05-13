@@ -4,11 +4,10 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import type { SectionWithQuestions, SurveySection } from "@/lib/types";
 import {
   deleteSectionAction,
-  reorderQuestionsAction,
   reorderSectionsAction,
 } from "@/modules/admin/controllers/admin.controller";
-import { QuestionEditor } from "@/modules/admin/components/question-editor";
 import { QuestionForm } from "@/modules/admin/components/question-form";
+import { QuestionSortableList } from "@/modules/admin/components/question-sortable-scope";
 import { SectionForm } from "@/modules/admin/components/section-form";
 import { SortableAdminList } from "@/modules/admin/components/sortable-admin-list";
 
@@ -23,7 +22,6 @@ export function SectionEditor({
   sections: SurveySection[];
   depth?: number;
 }) {
-  const reorderQuestionListAction = reorderQuestionsAction.bind(null, templateId, section.id);
   const reorderChildSectionsAction = reorderSectionsAction.bind(null, templateId, section.id);
 
   return (
@@ -48,15 +46,7 @@ export function SectionEditor({
           <Button type="submit" variant="destructive" size="sm">Hapus bagian</Button>
         </form>
         <QuestionForm templateId={templateId} sections={sections} sectionId={section.id} />
-        <SortableAdminList
-          key={section.questions.map((question) => `${question.id}:${question.sort_order}:${question.label}:${question.question_type}:${question.weight}:${question.is_active}`).join("|")}
-          reorderAction={reorderQuestionListAction}
-          items={section.questions.map((question) => ({
-            id: question.id,
-            label: question.label,
-            node: <QuestionEditor templateId={templateId} question={question} sections={sections} />,
-          }))}
-        />
+        <QuestionSortableList sectionId={section.id} />
         {section.children.length ? (
           <SortableAdminList
             key={section.children.map((child) => `${child.id}:${child.sort_order}:${child.title}:${child.is_active}`).join("|")}

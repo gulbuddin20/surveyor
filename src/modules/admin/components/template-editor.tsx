@@ -3,10 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { TemplateAdminDetail } from "@/lib/types";
+import type { SectionWithQuestions, TemplateAdminDetail } from "@/lib/types";
 import { IdentityFieldEditor } from "@/modules/admin/components/identity-field-editor";
 import { IdentityFieldForm } from "@/modules/admin/components/identity-field-form";
+import { QuestionEditor } from "@/modules/admin/components/question-editor";
 import { QuestionForm } from "@/modules/admin/components/question-form";
+import { QuestionDragScope } from "@/modules/admin/components/question-sortable-scope";
 import { ResponseFieldEditor } from "@/modules/admin/components/response-field-editor";
 import { ResponseFieldForm } from "@/modules/admin/components/response-field-form";
 import { SectionEditor } from "@/modules/admin/components/section-editor";
@@ -14,16 +16,33 @@ import { SectionForm } from "@/modules/admin/components/section-form";
 import { SortableAdminList } from "@/modules/admin/components/sortable-admin-list";
 import {
   reorderIdentityFieldsAction,
+  reorderQuestionSectionsAction,
   reorderResponseFieldsAction,
   reorderSectionsAction,
   updateTemplateSettingsAction,
 } from "@/modules/admin/controllers/admin.controller";
 import { countQuestions } from "@/modules/surveys/services/formula.service";
 
+function flattenSections(sections: SectionWithQuestions[]): SectionWithQuestions[] {
+  return sections.flatMap((section) => [section, ...flattenSections(section.children)]);
+}
+
 export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
   const reorderIdentityAction = reorderIdentityFieldsAction.bind(null, detail.id);
   const reorderResponseAction = reorderResponseFieldsAction.bind(null, detail.id);
   const reorderRootSectionsAction = reorderSectionsAction.bind(null, detail.id, null);
+  const reorderQuestionSections = reorderQuestionSectionsAction.bind(null, detail.id);
+  const allSections = flattenSections(detail.sections);
+  const questionContainers = allSections.map((section) => ({
+    sectionId: section.id,
+    title: section.title,
+    questionIds: section.questions.map((question) => question.id),
+  }));
+  const questionItems = allSections.flatMap((section) => section.questions.map((question) => ({
+    id: question.id,
+    label: question.label,
+    node: <QuestionEditor templateId={detail.id} question={question} sections={detail.flatSections} />,
+  })));
 
   return (
     <div className="space-y-5">
@@ -105,16 +124,23 @@ export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
       </Card>
       <SectionForm templateId={detail.id} sections={detail.flatSections} />
       <QuestionForm templateId={detail.id} sections={detail.flatSections} />
-      <SortableAdminList
-        key={detail.sections.map((section) => `${section.id}:${section.sort_order}:${section.title}:${section.is_active}`).join("|")}
-        className="space-y-4"
-        reorderAction={reorderRootSectionsAction}
-        items={detail.sections.map((section) => ({
-          id: section.id,
-          label: section.title,
-          node: <SectionEditor templateId={detail.id} section={section} sections={detail.flatSections} />,
-        }))}
-      />
+      <QuestionDragScope
+        key={questionContainers.map((container) => `${container.sectionId}:${container.questionIds.join(",")}`).join("|")}
+        containers={questionContainers}
+        items={questionItems}
+        reorderAction={reorderQuestionSections}
+      >
+        <SortableAdminList
+          key={detail.sections.map((section) => `${section.id}:${section.sort_order}:${section.title}:${section.is_active}`).join("|")}
+          className="space-y-4"
+          reorderAction={reorderRootSectionsAction}
+          items={detail.sections.map((section) => ({
+            id: section.id,
+            label: section.title,
+            node: <SectionEditor templateId={detail.id} section={section} sections={detail.flatSections} />,
+          }))}
+        />
+      </QuestionDragScope>
     </div>
   );
 }
