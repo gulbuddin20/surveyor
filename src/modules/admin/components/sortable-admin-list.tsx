@@ -48,36 +48,6 @@ type SortableCardProps = {
 };
 
 const TOUCH_LONG_PRESS_MS = 2000;
-const INTERACTIVE_SELECTOR = [
-  "a",
-  "button",
-  "input",
-  "label",
-  "select",
-  "summary",
-  "textarea",
-  "[contenteditable='true']",
-  "[role='button']",
-  "[data-no-card-drag]",
-].join(",");
-
-function canStartCardDrag(target: EventTarget | null) {
-  return target instanceof Element && !target.closest(INTERACTIVE_SELECTOR);
-}
-
-class CardMouseSensor extends MouseSensor {
-  static activators: typeof MouseSensor.activators = [{
-    eventName: "onMouseDown",
-    handler: ({ nativeEvent }) => canStartCardDrag(nativeEvent.target),
-  }];
-}
-
-class CardTouchSensor extends TouchSensor {
-  static activators: typeof TouchSensor.activators = [{
-    eventName: "onTouchStart",
-    handler: ({ nativeEvent }) => canStartCardDrag(nativeEvent.target),
-  }];
-}
 
 function areOrdersEqual(left: SortableAdminItem[], right: SortableAdminItem[]) {
   return left.length === right.length && left.every((item, index) => item.id === right[index]?.id);
@@ -95,6 +65,7 @@ function SortableCard({
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
@@ -103,53 +74,66 @@ function SortableCard({
   return (
     <div
       ref={setNodeRef}
-      className={cn(
-        "group grid cursor-grab gap-3 rounded-[1.75rem] transition-shadow duration-200 [touch-action:pan-y] md:grid-cols-[auto_1fr]",
-        isDragging
-          ? "opacity-30 ring-2 ring-[color:rgba(242,111,76,0.28)]"
-          : "hover:shadow-[0_14px_34px_rgba(22,37,29,0.08)]",
-        itemClassName,
-      )}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
       }}
-      {...attributes}
-      {...listeners}
     >
-      <div className="flex items-center gap-2 md:flex-col md:justify-start">
-        <div
-          aria-hidden="true"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl border border-[color:rgba(22,37,29,0.16)] bg-[color:rgba(255,249,234,0.82)] text-[var(--atlas-jungle)] shadow-[0_10px_24px_rgba(22,37,29,0.08)] transition group-hover:border-[var(--atlas-coral)]"
+      <div
+        className={cn(
+          "group rounded-[1.75rem] transition-shadow duration-200",
+          isDragging
+            ? "opacity-30 ring-2 ring-[color:rgba(242,111,76,0.28)]"
+            : "hover:shadow-[0_14px_34px_rgba(22,37,29,0.08)]",
+          itemClassName,
+        )}
+      >
+        <button
+          ref={setActivatorNodeRef}
+          type="button"
+          className="mb-2 flex min-h-10 w-full cursor-grab touch-manipulation items-center justify-center rounded-2xl border border-dashed border-[color:rgba(22,37,29,0.16)] bg-[color:rgba(255,249,234,0.62)] text-[var(--atlas-jungle)] transition hover:border-[var(--atlas-coral)] hover:bg-[color:rgba(255,249,234,0.9)] active:cursor-grabbing"
+          aria-label={`Drag ${item.label}`}
+          {...attributes}
+          {...listeners}
         >
           <GripVertical className="h-5 w-5" />
-        </div>
-        <div className="flex gap-1 md:flex-col" data-no-card-drag>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="min-h-9 rounded-xl px-2"
-            aria-label={`Naikkan ${item.label}`}
-            disabled={index === 0 || isPending}
-            onClick={() => onMove(item.id, -1)}
-          >
-            <ArrowUp className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="min-h-9 rounded-xl px-2"
-            aria-label={`Turunkan ${item.label}`}
-            disabled={index === totalItems - 1 || isPending}
-            onClick={() => onMove(item.id, 1)}
-          >
-            <ArrowDown className="h-4 w-4" />
-          </Button>
+        </button>
+        <div className="grid gap-3 md:grid-cols-[auto_1fr]">
+          <div className="flex items-center gap-2 md:flex-col md:justify-start">
+            <div
+              aria-hidden="true"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl border border-[color:rgba(22,37,29,0.16)] bg-[color:rgba(255,249,234,0.82)] text-[var(--atlas-jungle)] shadow-[0_10px_24px_rgba(22,37,29,0.08)]"
+            >
+              <GripVertical className="h-5 w-5" />
+            </div>
+            <div className="flex gap-1 md:flex-col">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="min-h-9 rounded-xl px-2"
+                aria-label={`Naikkan ${item.label}`}
+                disabled={index === 0 || isPending}
+                onClick={() => onMove(item.id, -1)}
+              >
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="min-h-9 rounded-xl px-2"
+                aria-label={`Turunkan ${item.label}`}
+                disabled={index === totalItems - 1 || isPending}
+                onClick={() => onMove(item.id, 1)}
+              >
+                <ArrowDown className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          {item.node}
         </div>
       </div>
-      {item.node}
     </div>
   );
 }
@@ -158,19 +142,24 @@ function DragPreview({ item, itemClassName }: { item: SortableAdminItem; itemCla
   return (
     <div
       className={cn(
-        "grid cursor-grabbing gap-3 rounded-[1.75rem] bg-[color:rgba(255,249,234,0.96)] opacity-95 ring-2 ring-[color:rgba(242,111,76,0.36)] shadow-[0_28px_72px_rgba(22,37,29,0.28)] md:grid-cols-[auto_1fr]",
+        "rounded-[1.75rem] bg-[color:rgba(255,249,234,0.96)] opacity-95 ring-2 ring-[color:rgba(242,111,76,0.36)] shadow-[0_28px_72px_rgba(22,37,29,0.28)]",
         itemClassName,
       )}
     >
-      <div className="flex items-center gap-2 md:flex-col md:justify-start">
-        <div
-          aria-hidden="true"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl border border-[var(--atlas-coral)] bg-[color:rgba(255,249,234,0.92)] text-[var(--atlas-jungle)] shadow-[0_10px_24px_rgba(22,37,29,0.12)]"
-        >
-          <GripVertical className="h-5 w-5" />
-        </div>
+      <div className="mb-2 flex min-h-10 w-full cursor-grabbing items-center justify-center rounded-2xl border border-[var(--atlas-coral)] bg-[color:rgba(255,249,234,0.92)] text-[var(--atlas-jungle)]">
+        <GripVertical className="h-5 w-5" />
       </div>
-      <div className="pointer-events-none">{item.node}</div>
+      <div className="grid gap-3 md:grid-cols-[auto_1fr]">
+        <div className="flex items-center gap-2 md:flex-col md:justify-start">
+          <div
+            aria-hidden="true"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl border border-[var(--atlas-coral)] bg-[color:rgba(255,249,234,0.92)] text-[var(--atlas-jungle)] shadow-[0_10px_24px_rgba(22,37,29,0.12)]"
+          >
+            <GripVertical className="h-5 w-5" />
+          </div>
+        </div>
+        <div className="pointer-events-none">{item.node}</div>
+      </div>
     </div>
   );
 }
@@ -187,10 +176,10 @@ export function SortableAdminList({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const sensors = useSensors(
-    useSensor(CardMouseSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: { distance: 4 },
     }),
-    useSensor(CardTouchSensor, {
+    useSensor(TouchSensor, {
       activationConstraint: { delay: TOUCH_LONG_PRESS_MS, tolerance: 10 },
     }),
   );
