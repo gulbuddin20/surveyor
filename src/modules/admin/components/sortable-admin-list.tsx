@@ -45,7 +45,13 @@ type SortableCardProps = {
   itemClassName?: string;
   totalItems: number;
   onMove: (id: string, direction: -1 | 1) => void;
+  onMeasure: (id: string, rect: DOMRect) => void;
 };
+
+type DragPreviewSize = {
+  width: number;
+  height: number;
+} | null;
 
 const TOUCH_LONG_PRESS_MS = 2000;
 
@@ -60,6 +66,7 @@ function SortableCard({
   itemClassName,
   totalItems,
   onMove,
+  onMeasure,
 }: SortableCardProps) {
   const {
     attributes,
@@ -73,7 +80,10 @@ function SortableCard({
 
   return (
     <div
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node);
+        if (node) onMeasure(item.id, node.getBoundingClientRect());
+      }}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
@@ -138,13 +148,25 @@ function SortableCard({
   );
 }
 
-function DragPreview({ item, itemClassName }: { item: SortableAdminItem; itemClassName?: string }) {
+function DragPreview({
+  item,
+  itemClassName,
+  size,
+}: {
+  item: SortableAdminItem;
+  itemClassName?: string;
+  size: DragPreviewSize;
+}) {
   return (
     <div
       className={cn(
         "rounded-[1.75rem] bg-[color:rgba(255,249,234,0.96)] opacity-95 ring-2 ring-[color:rgba(242,111,76,0.36)] shadow-[0_28px_72px_rgba(22,37,29,0.28)]",
         itemClassName,
       )}
+      style={{
+        width: size?.width,
+        minHeight: size?.height,
+      }}
     >
       <div className="mb-2 flex min-h-10 w-full cursor-grabbing items-center justify-center rounded-2xl border border-[var(--atlas-coral)] bg-[color:rgba(255,249,234,0.92)] text-[var(--atlas-jungle)]">
         <GripVertical className="h-5 w-5" />
@@ -173,6 +195,8 @@ export function SortableAdminList({
 }: SortableAdminListProps) {
   const [orderedItems, setOrderedItems] = useState(items);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeSize, setActiveSize] = useState<DragPreviewSize>(null);
+  const [itemRects, setItemRects] = useState<Record<string, DragPreviewSize>>({});
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const sensors = useSensors(
@@ -206,11 +230,14 @@ export function SortableAdminList({
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(String(event.active.id));
+    const nextActiveId = String(event.active.id);
+    setActiveId(nextActiveId);
+    setActiveSize(itemRects[nextActiveId] ?? null);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveId(null);
+    setActiveSize(null);
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
@@ -226,6 +253,15 @@ export function SortableAdminList({
   if (orderedItems.length === 0) {
     return empty ? <>{empty}</> : null;
   }
+
+  const measureItem = (id: string, rect: DOMRect) => {
+    const nextSize = { width: rect.width, height: rect.height };
+    setItemRects((current) => {
+      const currentSize = current[id];
+      if (currentSize?.width === nextSize.width && currentSize.height === nextSize.height) return current;
+      return { ...current, [id]: nextSize };
+    });
+  };
 
   const activeItem = activeId ? orderedItems.find((item) => item.id === activeId) : null;
 
@@ -244,7 +280,10 @@ export function SortableAdminList({
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
-        onDragCancel={() => setActiveId(null)}
+        onDragCancel={() => {
+          setActiveId(null);
+          setActiveSize(null);
+        }}
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={orderedItems.map((item) => item.id)} strategy={verticalListSortingStrategy}>
@@ -258,12 +297,16 @@ export function SortableAdminList({
                 itemClassName={itemClassName}
                 totalItems={orderedItems.length}
                 onMove={moveByButton}
+                onMeasure={measureItem}
               />
             ))}
           </div>
         </SortableContext>
-        <DragOverlay dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
-          {activeItem ? <DragPreview item={activeItem} itemClassName={itemClassName} /> : null}
+        <DragOverlay
+          adjustScale={false}
+          dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}
+        >
+          {activeItem ? <DragPreview item={activeItem} itemClassName={itemClassName} size={activeSize} /> : null}
         </DragOverlay>
       </DndContext>
     </div>
