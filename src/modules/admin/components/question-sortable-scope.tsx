@@ -122,7 +122,7 @@ function QuestionSortableCard({
     >
       <div
         className={cn(
-          "group rounded-[1.75rem] transition-shadow duration-200",
+          "group relative rounded-[1.75rem] transition-shadow duration-200",
           isDragging
             ? "opacity-30 ring-2 ring-[color:rgba(242,111,76,0.28)]"
             : "hover:shadow-[0_14px_34px_rgba(22,37,29,0.08)]",
@@ -131,12 +131,12 @@ function QuestionSortableCard({
         <button
           ref={setActivatorNodeRef}
           type="button"
-          className="mb-2 flex min-h-10 w-full cursor-grab touch-manipulation items-center justify-center rounded-2xl border border-dashed border-[color:rgba(22,37,29,0.16)] bg-[color:rgba(255,249,234,0.62)] text-[var(--atlas-jungle)] transition hover:border-[var(--atlas-coral)] hover:bg-[color:rgba(255,249,234,0.9)] active:cursor-grabbing"
+          className="absolute left-1/2 top-1 z-10 flex h-7 w-12 -translate-x-1/2 cursor-grab touch-manipulation items-center justify-center rounded-full border border-dashed border-[color:rgba(22,37,29,0.18)] bg-[color:rgba(255,249,234,0.94)] text-[var(--atlas-jungle)] shadow-[0_8px_18px_rgba(22,37,29,0.08)] transition hover:border-[var(--atlas-coral)] hover:bg-[color:rgba(255,249,234,1)] active:cursor-grabbing"
           aria-label={`Drag ${item.label}`}
           {...attributes}
           {...listeners}
         >
-          <GripVertical className="h-5 w-5" />
+          <GripVertical className="h-4 w-4" />
         </button>
         <div className="grid gap-3 md:grid-cols-[auto_1fr]">
           <div className="flex items-center gap-2 md:flex-col md:justify-start">
@@ -181,14 +181,14 @@ function QuestionSortableCard({
 function QuestionDragPreview({ item, size }: { item: SortableAdminItem; size: DragPreviewSize }) {
   return (
     <div
-      className="rounded-[1.75rem] bg-[color:rgba(255,249,234,0.96)] opacity-95 ring-2 ring-[color:rgba(242,111,76,0.36)] shadow-[0_28px_72px_rgba(22,37,29,0.28)]"
+      className="relative rounded-[1.75rem] bg-[color:rgba(255,249,234,0.96)] opacity-95 ring-2 ring-[color:rgba(242,111,76,0.36)] shadow-[0_28px_72px_rgba(22,37,29,0.28)]"
       style={{
         width: size?.width,
         minHeight: size?.height,
       }}
     >
-      <div className="mb-2 flex min-h-10 w-full cursor-grabbing items-center justify-center rounded-2xl border border-[var(--atlas-coral)] bg-[color:rgba(255,249,234,0.92)] text-[var(--atlas-jungle)]">
-        <GripVertical className="h-5 w-5" />
+      <div className="absolute left-1/2 top-1 z-10 flex h-7 w-12 -translate-x-1/2 cursor-grabbing items-center justify-center rounded-full border border-[var(--atlas-coral)] bg-[color:rgba(255,249,234,0.98)] text-[var(--atlas-jungle)] shadow-[0_8px_18px_rgba(22,37,29,0.12)]">
+        <GripVertical className="h-4 w-4" />
       </div>
       <div className="grid gap-3 md:grid-cols-[auto_1fr]">
         <div className="flex items-center gap-2 md:flex-col md:justify-start">
@@ -250,11 +250,11 @@ export function QuestionDragScope({
   const [containerItems, setContainerItems] = useState(() => createInitialContainerItems(containers));
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeSize, setActiveSize] = useState<DragPreviewSize>(null);
-  const [itemRects, setItemRects] = useState<Record<string, DragPreviewSize>>({});
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const latestContainerItems = useRef(containerItems);
   const dragStartContainerItems = useRef(containerItems);
+  const itemRects = useRef<Record<string, DragPreviewSize>>({});
   const itemMap = new Map(items.map((item) => [item.id, item]));
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -297,18 +297,16 @@ export function QuestionDragScope({
 
   const measureItem = (id: string, rect: DOMRect) => {
     const nextSize = { width: rect.width, height: rect.height };
-    setItemRects((current) => {
-      const currentSize = current[id];
-      if (currentSize?.width === nextSize.width && currentSize.height === nextSize.height) return current;
-      return { ...current, [id]: nextSize };
-    });
+    const currentSize = itemRects.current[id];
+    if (currentSize?.width === nextSize.width && currentSize.height === nextSize.height) return;
+    itemRects.current[id] = nextSize;
   };
 
   const handleDragStart = (event: DragStartEvent) => {
     const nextActiveId = String(event.active.id);
     dragStartContainerItems.current = latestContainerItems.current;
     setActiveId(nextActiveId);
-    setActiveSize(itemRects[nextActiveId] ?? null);
+    setActiveSize(itemRects.current[nextActiveId] ?? null);
   };
 
   const handleDragOver = (event: DragOverEvent) => {
