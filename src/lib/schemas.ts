@@ -98,6 +98,13 @@ export const templateSettingsSchema = z.object({
   photoMaxSizeMb: z.coerce.number().int().min(1).max(25),
 });
 
+export const templateReorderSchema = z.object({
+  templateId: z.uuid(),
+  parentId: z.uuid().nullable().optional(),
+  sectionId: z.uuid().nullable().optional(),
+  orderedIds: z.array(z.uuid()).min(1),
+});
+
 export const surveySubmissionSchema = z.object({
   templateId: z.uuid(),
   responseId: z.uuid().optional(),
@@ -116,6 +123,7 @@ export type TemplateInput = z.infer<typeof templateSchema>;
 export type IdentityFieldInput = z.infer<typeof identityFieldSchema>;
 export type ResponseFieldInput = z.infer<typeof responseFieldSchema>;
 export type TemplateSettingsInput = z.infer<typeof templateSettingsSchema>;
+export type TemplateReorderInput = z.infer<typeof templateReorderSchema>;
 export type SectionInput = z.infer<typeof sectionSchema>;
 export type QuestionInput = z.infer<typeof questionSchema>;
 export type FormulaInput = z.infer<typeof formulaSchema>;

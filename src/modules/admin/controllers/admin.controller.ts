@@ -15,6 +15,10 @@ import {
   removeResponseFieldFromForm,
   removeSectionFromForm,
   removeTemplateFromForm,
+  reorderIdentityFieldsFromInput,
+  reorderQuestionsFromInput,
+  reorderResponseFieldsFromInput,
+  reorderSectionsFromInput,
   saveIdentityFieldFromForm,
   saveQuestionFromForm,
   saveResponseFieldFromForm,
@@ -144,5 +148,33 @@ export async function deleteQuestionAction(formData: FormData) {
   await requireSuperAdmin();
   const result = await removeQuestionFromForm(formData);
   if (!result.ok) throw new Error(result.message ?? "Gagal menghapus pertanyaan");
+  revalidatePath("/admin/templates");
+}
+
+export async function reorderIdentityFieldsAction(templateId: string, orderedIds: string[]) {
+  await requireSuperAdmin();
+  const result = await reorderIdentityFieldsFromInput(templateId, orderedIds);
+  if (!result.ok) throw new Error(result.message ?? "Gagal menyimpan urutan header");
+  revalidatePath("/admin/templates");
+}
+
+export async function reorderResponseFieldsAction(templateId: string, orderedIds: string[]) {
+  await requireSuperAdmin();
+  const result = await reorderResponseFieldsFromInput(templateId, orderedIds);
+  if (!result.ok) throw new Error(result.message ?? "Gagal menyimpan urutan field");
+  revalidatePath("/admin/templates");
+}
+
+export async function reorderSectionsAction(templateId: string, parentId: string | null, orderedIds: string[]) {
+  await requireSuperAdmin();
+  const result = await reorderSectionsFromInput(templateId, parentId, orderedIds);
+  if (!result.ok) throw new Error(result.message ?? "Gagal menyimpan urutan bagian");
+  revalidatePath("/admin/templates");
+}
+
+export async function reorderQuestionsAction(templateId: string, sectionId: string | null, orderedIds: string[]) {
+  await requireSuperAdmin();
+  const result = await reorderQuestionsFromInput(templateId, sectionId, orderedIds);
+  if (!result.ok) throw new Error(result.message ?? "Gagal menyimpan urutan pertanyaan");
   revalidatePath("/admin/templates");
 }

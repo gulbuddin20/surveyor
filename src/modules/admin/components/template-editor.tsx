@@ -11,10 +11,20 @@ import { ResponseFieldEditor } from "@/modules/admin/components/response-field-e
 import { ResponseFieldForm } from "@/modules/admin/components/response-field-form";
 import { SectionEditor } from "@/modules/admin/components/section-editor";
 import { SectionForm } from "@/modules/admin/components/section-form";
-import { updateTemplateSettingsAction } from "@/modules/admin/controllers/admin.controller";
+import { SortableAdminList } from "@/modules/admin/components/sortable-admin-list";
+import {
+  reorderIdentityFieldsAction,
+  reorderResponseFieldsAction,
+  reorderSectionsAction,
+  updateTemplateSettingsAction,
+} from "@/modules/admin/controllers/admin.controller";
 import { countQuestions } from "@/modules/surveys/services/formula.service";
 
 export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
+  const reorderIdentityAction = reorderIdentityFieldsAction.bind(null, detail.id);
+  const reorderResponseAction = reorderResponseFieldsAction.bind(null, detail.id);
+  const reorderRootSectionsAction = reorderSectionsAction.bind(null, detail.id, null);
+
   return (
     <div className="space-y-5">
       <Card>
@@ -46,14 +56,17 @@ export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
             <IdentityFieldForm templateId={detail.id} />
           </div>
         </details>
-        <div className="mt-4 space-y-3">
-          {detail.identityFields.length === 0 ? (
-            <p className="text-sm text-[color:rgba(22,37,29,0.58)]">Belum ada header. Klik Tambah header untuk mulai dari kosong.</p>
-          ) : null}
-          {detail.identityFields.map((field) => (
-            <IdentityFieldEditor key={field.id} templateId={detail.id} field={field} />
-          ))}
-        </div>
+        <SortableAdminList
+          key={detail.identityFields.map((field) => `${field.id}:${field.sort_order}:${field.updated_at}`).join("|")}
+          className="mt-4"
+          reorderAction={reorderIdentityAction}
+          empty={<p className="mt-4 text-sm text-[color:rgba(22,37,29,0.58)]">Belum ada header. Klik Tambah header untuk mulai dari kosong.</p>}
+          items={detail.identityFields.map((field) => ({
+            id: field.id,
+            label: field.label,
+            node: <IdentityFieldEditor templateId={detail.id} field={field} />,
+          }))}
+        />
       </Card>
       <Card>
         <CardHeader>
@@ -78,22 +91,30 @@ export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
             <ResponseFieldForm templateId={detail.id} />
           </div>
         </details>
-        <div className="mt-4 space-y-3">
-          {detail.responseFields.length === 0 ? (
-            <p className="text-sm text-[color:rgba(22,37,29,0.58)]">Belum ada field setelah kuesioner.</p>
-          ) : null}
-          {detail.responseFields.map((field) => (
-            <ResponseFieldEditor key={field.id} templateId={detail.id} field={field} />
-          ))}
-        </div>
+        <SortableAdminList
+          key={detail.responseFields.map((field) => `${field.id}:${field.sort_order}:${field.updated_at}`).join("|")}
+          className="mt-4"
+          reorderAction={reorderResponseAction}
+          empty={<p className="mt-4 text-sm text-[color:rgba(22,37,29,0.58)]">Belum ada field setelah kuesioner.</p>}
+          items={detail.responseFields.map((field) => ({
+            id: field.id,
+            label: field.label,
+            node: <ResponseFieldEditor templateId={detail.id} field={field} />,
+          }))}
+        />
       </Card>
       <SectionForm templateId={detail.id} sections={detail.flatSections} />
       <QuestionForm templateId={detail.id} sections={detail.flatSections} />
-      <div className="space-y-4">
-        {detail.sections.map((section) => (
-          <SectionEditor key={section.id} templateId={detail.id} section={section} sections={detail.flatSections} />
-        ))}
-      </div>
+      <SortableAdminList
+        key={detail.sections.map((section) => `${section.id}:${section.sort_order}:${section.title}:${section.is_active}`).join("|")}
+        className="space-y-4"
+        reorderAction={reorderRootSectionsAction}
+        items={detail.sections.map((section) => ({
+          id: section.id,
+          label: section.title,
+          node: <SectionEditor templateId={detail.id} section={section} sections={detail.flatSections} />,
+        }))}
+      />
     </div>
   );
 }

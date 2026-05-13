@@ -2,10 +2,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { SectionWithQuestions, SurveySection } from "@/lib/types";
-import { deleteSectionAction } from "@/modules/admin/controllers/admin.controller";
+import {
+  deleteSectionAction,
+  reorderQuestionsAction,
+  reorderSectionsAction,
+} from "@/modules/admin/controllers/admin.controller";
 import { QuestionEditor } from "@/modules/admin/components/question-editor";
 import { QuestionForm } from "@/modules/admin/components/question-form";
 import { SectionForm } from "@/modules/admin/components/section-form";
+import { SortableAdminList } from "@/modules/admin/components/sortable-admin-list";
 
 export function SectionEditor({
   templateId,
@@ -18,6 +23,9 @@ export function SectionEditor({
   sections: SurveySection[];
   depth?: number;
 }) {
+  const reorderQuestionListAction = reorderQuestionsAction.bind(null, templateId, section.id);
+  const reorderChildSectionsAction = reorderSectionsAction.bind(null, templateId, section.id);
+
   return (
     <Card className={depth ? "bg-[color:rgba(255,249,234,0.64)]" : undefined}>
       <CardHeader>
@@ -40,23 +48,33 @@ export function SectionEditor({
           <Button type="submit" variant="destructive" size="sm">Hapus bagian</Button>
         </form>
         <QuestionForm templateId={templateId} sections={sections} sectionId={section.id} />
-        <div className="space-y-3">
-          {section.questions.map((question) => (
-            <QuestionEditor key={question.id} templateId={templateId} question={question} sections={sections} />
-          ))}
-        </div>
+        <SortableAdminList
+          key={section.questions.map((question) => `${question.id}:${question.sort_order}:${question.label}:${question.question_type}:${question.weight}:${question.is_active}`).join("|")}
+          reorderAction={reorderQuestionListAction}
+          items={section.questions.map((question) => ({
+            id: question.id,
+            label: question.label,
+            node: <QuestionEditor templateId={templateId} question={question} sections={sections} />,
+          }))}
+        />
         {section.children.length ? (
-          <div className="space-y-4 border-l-2 border-[color:rgba(242,111,76,0.28)] pl-4">
-            {section.children.map((child) => (
-              <SectionEditor
-                key={child.id}
-                templateId={templateId}
-                section={child}
-                sections={sections}
-                depth={depth + 1}
-              />
-            ))}
-          </div>
+          <SortableAdminList
+            key={section.children.map((child) => `${child.id}:${child.sort_order}:${child.title}:${child.is_active}`).join("|")}
+            className="space-y-4 border-l-2 border-[color:rgba(242,111,76,0.28)] pl-4"
+            reorderAction={reorderChildSectionsAction}
+            items={section.children.map((child) => ({
+              id: child.id,
+              label: child.title,
+              node: (
+                <SectionEditor
+                  templateId={templateId}
+                  section={child}
+                  sections={sections}
+                  depth={depth + 1}
+                />
+              ),
+            }))}
+          />
         ) : null}
       </div>
     </Card>
