@@ -21,6 +21,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { ArrowDown, ArrowUp, GripVertical } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -264,6 +265,14 @@ export function SortableAdminList({
   };
 
   const activeItem = activeId ? orderedItems.find((item) => item.id === activeId) : null;
+  const dragOverlay = (
+    <DragOverlay
+      adjustScale={false}
+      dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}
+    >
+      {activeItem ? <DragPreview item={activeItem} itemClassName={itemClassName} size={activeSize} /> : null}
+    </DragOverlay>
+  );
 
   return (
     <div className={cn("space-y-3", className)}>
@@ -302,12 +311,7 @@ export function SortableAdminList({
             ))}
           </div>
         </SortableContext>
-        <DragOverlay
-          adjustScale={false}
-          dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}
-        >
-          {activeItem ? <DragPreview item={activeItem} itemClassName={itemClassName} size={activeSize} /> : null}
-        </DragOverlay>
+        {typeof document === "undefined" ? dragOverlay : createPortal(dragOverlay, document.body)}
       </DndContext>
     </div>
   );
