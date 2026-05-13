@@ -7,6 +7,7 @@ import type {
   ResponseFieldInput,
   SectionInput,
   TemplateInput,
+  TemplateReorderInput,
   TemplateSettingsInput,
   UserInput,
 } from "@/lib/schemas";
@@ -290,6 +291,68 @@ export async function deleteResponseField(fieldId: string) {
   if (error) throw error;
 }
 
+function assertExactReorderScope(orderedIds: string[], scopedIds: string[]) {
+  if (new Set(orderedIds).size !== orderedIds.length) {
+    throw new Error("Urutan berisi item duplikat.");
+  }
+
+  const scopedIdSet = new Set(scopedIds);
+  const isSameScope = orderedIds.length === scopedIds.length && orderedIds.every((id) => scopedIdSet.has(id));
+  if (!isSameScope) {
+    throw new Error("Urutan tidak valid untuk scope ini.");
+  }
+}
+
+function sortOrderForIndex(index: number) {
+  return (index + 1) * 10;
+}
+
+export async function reorderIdentityFields(input: TemplateReorderInput) {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .schema("surveyor")
+    .from("template_identity_fields")
+    .select("id")
+    .eq("template_id", input.templateId)
+    .order("sort_order");
+  if (error) throw error;
+
+  assertExactReorderScope(input.orderedIds, (data ?? []).map((item) => item.id));
+
+  await Promise.all(input.orderedIds.map(async (id, index) => {
+    const { error: updateError } = await supabase
+      .schema("surveyor")
+      .from("template_identity_fields")
+      .update({ sort_order: sortOrderForIndex(index) })
+      .eq("id", id)
+      .eq("template_id", input.templateId);
+    if (updateError) throw updateError;
+  }));
+}
+
+export async function reorderResponseFields(input: TemplateReorderInput) {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .schema("surveyor")
+    .from("template_response_fields")
+    .select("id")
+    .eq("template_id", input.templateId)
+    .order("sort_order");
+  if (error) throw error;
+
+  assertExactReorderScope(input.orderedIds, (data ?? []).map((item) => item.id));
+
+  await Promise.all(input.orderedIds.map(async (id, index) => {
+    const { error: updateError } = await supabase
+      .schema("surveyor")
+      .from("template_response_fields")
+      .update({ sort_order: sortOrderForIndex(index) })
+      .eq("id", id)
+      .eq("template_id", input.templateId);
+    if (updateError) throw updateError;
+  }));
+}
+
 export async function upsertSection(input: SectionInput) {
   const supabase = await createSupabaseServerClient();
   if (input.sectionId && input.parentId) {
@@ -322,6 +385,35 @@ export async function deleteSection(sectionId: string) {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.schema("surveyor").from("survey_sections").delete().eq("id", sectionId);
   if (error) throw error;
+}
+
+export async function reorderSections(input: TemplateReorderInput) {
+  const supabase = await createSupabaseServerClient();
+  let scopedSections = supabase
+    .schema("surveyor")
+    .from("survey_sections")
+    .select("id")
+    .eq("template_id", input.templateId)
+    .order("sort_order");
+
+  scopedSections = input.parentId
+    ? scopedSections.eq("parent_id", input.parentId)
+    : scopedSections.is("parent_id", null);
+
+  const { data, error } = await scopedSections;
+  if (error) throw error;
+
+  assertExactReorderScope(input.orderedIds, (data ?? []).map((item) => item.id));
+
+  await Promise.all(input.orderedIds.map(async (id, index) => {
+    const { error: updateError } = await supabase
+      .schema("surveyor")
+      .from("survey_sections")
+      .update({ sort_order: sortOrderForIndex(index) })
+      .eq("id", id)
+      .eq("template_id", input.templateId);
+    if (updateError) throw updateError;
+  }));
 }
 
 export async function upsertQuestion(input: QuestionInput) {
@@ -381,4 +473,33 @@ export async function deleteQuestion(questionId: string) {
     .delete()
     .eq("id", questionId);
   if (error) throw error;
+}
+
+export async function reorderQuestions(input: TemplateReorderInput) {
+  const supabase = await createSupabaseServerClient();
+  let scopedQuestions = supabase
+    .schema("surveyor")
+    .from("survey_questions")
+    .select("id")
+    .eq("template_id", input.templateId)
+    .order("sort_order");
+
+  scopedQuestions = input.sectionId
+    ? scopedQuestions.eq("section_id", input.sectionId)
+    : scopedQuestions.is("section_id", null);
+
+  const { data, error } = await scopedQuestions;
+  if (error) throw error;
+
+  assertExactReorderScope(input.orderedIds, (data ?? []).map((item) => item.id));
+
+  await Promise.all(input.orderedIds.map(async (id, index) => {
+    const { error: updateError } = await supabase
+      .schema("surveyor")
+      .from("survey_questions")
+      .update({ sort_order: sortOrderForIndex(index) })
+      .eq("id", id)
+      .eq("template_id", input.templateId);
+    if (updateError) throw updateError;
+  }));
 }

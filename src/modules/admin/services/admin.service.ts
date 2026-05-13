@@ -5,6 +5,7 @@ import {
   responseFieldSchema,
   sectionSchema,
   templateSchema,
+  templateReorderSchema,
   templateSettingsSchema,
   userSchema,
 } from "@/lib/schemas";
@@ -19,6 +20,10 @@ import {
   getTemplateAdminDetail,
   listFormulas,
   listUsers,
+  reorderIdentityFields,
+  reorderQuestions,
+  reorderResponseFields,
+  reorderSections,
   updateFormula,
   updateTemplateSettings,
   upsertIdentityField,
@@ -207,4 +212,32 @@ export async function removeQuestionFromForm(formData: FormData) {
   if (!questionId) return { ok: false, message: "Pertanyaan tidak valid" };
   await deleteQuestion(questionId);
   return { ok: true, message: "Pertanyaan dihapus" };
+}
+
+export async function reorderIdentityFieldsFromInput(templateId: string, orderedIds: string[]) {
+  const parsed = templateReorderSchema.safeParse({ templateId, orderedIds });
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
+  await reorderIdentityFields(parsed.data);
+  return { ok: true, message: "Urutan header disimpan" };
+}
+
+export async function reorderResponseFieldsFromInput(templateId: string, orderedIds: string[]) {
+  const parsed = templateReorderSchema.safeParse({ templateId, orderedIds });
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
+  await reorderResponseFields(parsed.data);
+  return { ok: true, message: "Urutan field disimpan" };
+}
+
+export async function reorderSectionsFromInput(templateId: string, parentId: string | null, orderedIds: string[]) {
+  const parsed = templateReorderSchema.safeParse({ templateId, parentId, orderedIds });
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
+  await reorderSections(parsed.data);
+  return { ok: true, message: "Urutan bagian disimpan" };
+}
+
+export async function reorderQuestionsFromInput(templateId: string, sectionId: string | null, orderedIds: string[]) {
+  const parsed = templateReorderSchema.safeParse({ templateId, sectionId, orderedIds });
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
+  await reorderQuestions(parsed.data);
+  return { ok: true, message: "Urutan pertanyaan disimpan" };
 }
