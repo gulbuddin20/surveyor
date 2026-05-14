@@ -44,7 +44,7 @@ export async function loadTemplateEditorController(templateId?: string) {
   const data = await getTemplateManagementData();
   const selectedId = templateId ?? data.templates[0]?.id;
   if (!selectedId) return { templates: data.templates, detail: null };
-  return getTemplateEditorData(selectedId);
+  return getTemplateEditorData(selectedId, data.templates);
 }
 
 export async function loadFormulasController() {

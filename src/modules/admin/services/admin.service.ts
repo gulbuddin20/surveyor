@@ -45,12 +45,12 @@ export async function getTemplateManagementData() {
   return { templates: await listAllTemplates() };
 }
 
-export async function getTemplateEditorData(templateId: string) {
-  const [templates, detail] = await Promise.all([
-    listAllTemplates(),
+export async function getTemplateEditorData(templateId: string, templates?: Awaited<ReturnType<typeof listAllTemplates>>) {
+  const [templateRows, detail] = await Promise.all([
+    templates ? Promise.resolve(templates) : listAllTemplates(),
     getTemplateAdminDetail(templateId),
   ]);
-  return { templates, detail };
+  return { templates: templateRows, detail };
 }
 
 export async function getFormulaManagementData() {

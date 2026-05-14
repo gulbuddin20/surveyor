@@ -3,29 +3,67 @@ import type { DashboardStats } from "@/lib/types";
 
 export async function getDashboardStats(userId: string, isAdmin: boolean): Promise<DashboardStats> {
   const supabase = await createSupabaseServerClient();
-  let responseQuery = supabase.schema("surveyor").from("survey_responses").select("status, score");
-  let subjectQuery = supabase.schema("surveyor").from("msme_subjects").select("id");
+  const scopeResponses = <T>(query: T) => {
+    if (isAdmin) return query;
+    return (query as { eq: (column: string, value: string) => T }).eq("surveyor_id", userId);
+  };
+  const scopeSubjects = <T>(query: T) => {
+    if (isAdmin) return query;
+    return (query as { eq: (column: string, value: string) => T }).eq("owner_id", userId);
+  };
+
+  const responseCountQuery = scopeResponses(
+    supabase.schema("surveyor").from("survey_responses").select("id", { count: "exact", head: true }),
+  );
+  const submittedCountQuery = scopeResponses(
+    supabase.schema("surveyor").from("survey_responses").select("id", { count: "exact", head: true }).eq("status", "submitted"),
+  );
+  const draftCountQuery = scopeResponses(
+    supabase.schema("surveyor").from("survey_responses").select("id", { count: "exact", head: true }).eq("status", "draft"),
+  );
+  const failedCountQuery = scopeResponses(
+    supabase.schema("surveyor").from("survey_responses").select("id", { count: "exact", head: true }).eq("status", "submitted").lt("score", 80),
+  );
+  const subjectCountQuery = scopeSubjects(
+    supabase.schema("surveyor").from("msme_subjects").select("id", { count: "exact", head: true }),
+  );
+  let scoreQuery = supabase.schema("surveyor").from("survey_responses").select("score").eq("status", "submitted");
   if (!isAdmin) {
-    responseQuery = responseQuery.eq("surveyor_id", userId);
-    subjectQuery = subjectQuery.eq("owner_id", userId);
+    scoreQuery = scoreQuery.eq("surveyor_id", userId);
   }
 
-  const [{ data: responses, error: responseError }, { data: subjects, error: subjectError }] =
-    await Promise.all([responseQuery, subjectQuery]);
+  const [
+    { count: totalResponses, error: totalResponseError },
+    { count: submittedResponses, error: submittedError },
+    { count: draftResponses, error: draftError },
+    { count: failedResponses, error: failedError },
+    { count: totalSubjects, error: subjectError },
+    { data: submittedScores, error: scoreError },
+  ] = await Promise.all([
+    responseCountQuery,
+    submittedCountQuery,
+    draftCountQuery,
+    failedCountQuery,
+    subjectCountQuery,
+    scoreQuery,
+  ]);
 
-  if (responseError) throw responseError;
+  if (totalResponseError) throw totalResponseError;
+  if (submittedError) throw submittedError;
+  if (draftError) throw draftError;
+  if (failedError) throw failedError;
   if (subjectError) throw subjectError;
+  if (scoreError) throw scoreError;
 
-  const rows = responses ?? [];
-  const submitted = rows.filter((row) => row.status === "submitted");
-  const totalScore = submitted.reduce((total, row) => total + Number(row.score), 0);
+  const scores = submittedScores ?? [];
+  const totalScore = scores.reduce((total, row) => total + Number(row.score), 0);
 
   return {
-    totalResponses: rows.length,
-    submittedResponses: submitted.length,
-    draftResponses: rows.filter((row) => row.status === "draft").length,
-    averageScore: submitted.length ? Number((totalScore / submitted.length).toFixed(2)) : 0,
-    totalSubjects: subjects?.length ?? 0,
-    failedResponses: submitted.filter((row) => Number(row.score) < 80).length,
+    totalResponses: totalResponses ?? 0,
+    submittedResponses: submittedResponses ?? 0,
+    draftResponses: draftResponses ?? 0,
+    averageScore: scores.length ? Number((totalScore / scores.length).toFixed(2)) : 0,
+    totalSubjects: totalSubjects ?? 0,
+    failedResponses: failedResponses ?? 0,
   };
 }

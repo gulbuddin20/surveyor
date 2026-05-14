@@ -1,14 +1,15 @@
+import { cache } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types";
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.getUser();
   if (error) return null;
   return data.user;
-}
+});
 
-export async function getCurrentProfile(): Promise<Profile | null> {
+export const getCurrentProfile = cache(async (): Promise<Profile | null> => {
   const user = await getCurrentUser();
   if (!user) return null;
 
@@ -22,7 +23,7 @@ export async function getCurrentProfile(): Promise<Profile | null> {
 
   if (error || !data) return null;
   return data as Profile;
-}
+});
 
 export async function signInWithPassword(email: string, password: string) {
   const supabase = await createSupabaseServerClient();
