@@ -32,6 +32,10 @@ export function IdentityFieldEditor({
       <ActionForm
         action={deleteIdentityFieldAction}
         className="mt-3"
+        confirmActionLabel="Ya, hapus field"
+        confirmDescription={`Header "${field.label}" akan dihapus dari template.`}
+        confirmTitle="Hapus header identitas?"
+        confirmVariant="destructive"
         successMessage="Header identitas dihapus."
         errorMessage="Header gagal dihapus"
       >

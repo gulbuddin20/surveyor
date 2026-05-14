@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo } from "react";
 import { Save } from "lucide-react";
+import { ConfirmedSubmitButton } from "@/components/ui/confirmed-submit-button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { SubmitButton } from "@/components/ui/submit-button";
 import type { SectionWithQuestions, SurveyResultDetail, TemplateDetail } from "@/lib/types";
 import { IdentityFieldsCard } from "@/modules/surveys/components/identity-fields-card";
 import { ResponseFieldsCard } from "@/modules/surveys/components/response-fields-card";
@@ -86,10 +86,16 @@ export function SurveyForm({
             <p className="rounded-2xl bg-[color:rgba(242,111,76,0.12)] p-3 text-sm font-extrabold text-[var(--atlas-ink)]">
               {result.resultLabel}
             </p>
-            <SubmitButton className="w-full" pendingLabel={mode === "edit" ? "Menyimpan perubahan..." : "Menyimpan survei..."}>
+            <ConfirmedSubmitButton
+              className="w-full"
+              confirmActionLabel={mode === "edit" ? "Ya, simpan perubahan" : "Ya, simpan survei"}
+              confirmDescription="Hasil survei akan disimpan ke database. Periksa kembali identitas, jawaban, foto, dan catatan sebelum melanjutkan."
+              confirmTitle={mode === "edit" ? "Simpan perubahan survei?" : "Simpan survei baru?"}
+              pendingLabel={mode === "edit" ? "Menyimpan perubahan..." : "Menyimpan survei..."}
+            >
               <Save className="h-4 w-4" />
               {mode === "edit" ? "Simpan perubahan" : "Simpan survei"}
-            </SubmitButton>
+            </ConfirmedSubmitButton>
           </div>
         </Card>
       </aside>

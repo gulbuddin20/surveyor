@@ -32,6 +32,10 @@ export function ResponseFieldEditor({
       <ActionForm
         action={deleteResponseFieldAction}
         className="mt-3"
+        confirmActionLabel="Ya, hapus field"
+        confirmDescription={`Field "${field.label}" akan dihapus dari bagian setelah kuesioner.`}
+        confirmTitle="Hapus field setelah kuesioner?"
+        confirmVariant="destructive"
         successMessage="Field setelah kuesioner dihapus."
         errorMessage="Field gagal dihapus"
       >
