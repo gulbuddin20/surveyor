@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { ActionForm } from "@/components/ui/action-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { SurveySection } from "@/lib/types";
@@ -14,7 +15,13 @@ export function SectionForm({
   sections: SurveySection[];
 }) {
   return (
-    <form action={saveSectionAction} className="atlas-fieldset grid gap-3 rounded-[1.5rem] p-4 md:grid-cols-[1fr_160px_160px_auto]">
+    <ActionForm
+      action={saveSectionAction}
+      className="atlas-fieldset grid gap-3 rounded-[1.5rem] p-4 md:grid-cols-[1fr_160px_160px_auto]"
+      resetOnSuccess={!section}
+      successMessage={section ? "Bagian diperbarui." : "Bagian ditambahkan."}
+      errorMessage="Bagian gagal disimpan"
+    >
       <input type="hidden" name="templateId" value={templateId} />
       {section ? <input type="hidden" name="sectionId" value={section.id} /> : null}
       <div className="space-y-2">
@@ -46,6 +53,6 @@ export function SectionForm({
         </label>
         <Button type="submit">{section ? "Update" : "Tambah"}</Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }

@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { ActionForm } from "@/components/ui/action-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -110,14 +111,19 @@ export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
             Atur catatan, rekomendasi, upload foto, atau field tambahan lain. Jika kosong, tidak ada field tambahan yang muncul.
           </CardDescription>
         </CardHeader>
-        <form action={updateTemplateSettingsAction} className="mb-5 grid gap-3 md:grid-cols-[1fr_auto]">
+        <ActionForm
+          action={updateTemplateSettingsAction}
+          className="mb-5 grid gap-3 md:grid-cols-[1fr_auto]"
+          successMessage="Pengaturan template diperbarui."
+          errorMessage="Pengaturan gagal disimpan"
+        >
           <input type="hidden" name="templateId" value={detail.id} />
           <div className="space-y-2">
             <Label>Default max upload foto (MB)</Label>
             <Input name="photoMaxSizeMb" type="number" min={1} max={25} defaultValue={detail.photo_max_size_mb} />
           </div>
           <Button type="submit" className="md:self-end">Simpan pengaturan</Button>
-        </form>
+        </ActionForm>
         <details className="group rounded-[1.5rem] border border-[color:rgba(22,37,29,0.1)] bg-[color:rgba(255,249,234,0.42)] p-3">
           <summary className="cursor-pointer list-none text-sm font-extrabold text-[var(--atlas-jungle)]">
             Tambah field setelah kuesioner

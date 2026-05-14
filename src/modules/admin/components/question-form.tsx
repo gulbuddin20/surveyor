@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { ActionForm } from "@/components/ui/action-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,7 +29,13 @@ export function QuestionForm({
   sectionId?: string;
 }) {
   return (
-    <form action={saveQuestionAction} className="atlas-fieldset grid gap-3 rounded-[1.5rem] p-4">
+    <ActionForm
+      action={saveQuestionAction}
+      className="atlas-fieldset grid gap-3 rounded-[1.5rem] p-4"
+      resetOnSuccess={!question}
+      successMessage={question ? "Pertanyaan diperbarui." : "Pertanyaan ditambahkan."}
+      errorMessage="Pertanyaan gagal disimpan"
+    >
       <input type="hidden" name="templateId" value={templateId} />
       {question ? <input type="hidden" name="questionId" value={question.id} /> : null}
       <div className="grid gap-3 lg:grid-cols-[1fr_180px_120px_120px]">
@@ -85,6 +92,6 @@ export function QuestionForm({
           <Button type="submit">{question ? "Update" : "Tambah pertanyaan"}</Button>
         </div>
       </div>
-    </form>
+    </ActionForm>
   );
 }

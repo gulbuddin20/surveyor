@@ -1,3 +1,4 @@
+import { ActionForm } from "@/components/ui/action-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,12 @@ export function FormulaManagement({
               <CardTitle>{template.name}</CardTitle>
               <CardDescription>Atur denominator dan ambang lulus.</CardDescription>
             </CardHeader>
-            <form action={updateFormulaAction} className="space-y-4">
+            <ActionForm
+              action={updateFormulaAction}
+              className="space-y-4"
+              successMessage="Formula diperbarui."
+              errorMessage="Formula gagal disimpan"
+            >
               <input type="hidden" name="templateId" value={template.id} />
               <div className="space-y-2">
                 <Label>Expression</Label>
@@ -44,7 +50,7 @@ export function FormulaManagement({
                 </div>
               </div>
               <Button type="submit" className="w-full">Update formula</Button>
-            </form>
+            </ActionForm>
           </Card>
         );
       })}

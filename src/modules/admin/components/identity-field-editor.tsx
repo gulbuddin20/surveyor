@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { ActionForm } from "@/components/ui/action-form";
 import { Button } from "@/components/ui/button";
 import type { TemplateIdentityField } from "@/lib/types";
 import { deleteIdentityFieldAction } from "@/modules/admin/controllers/admin.controller";
@@ -28,12 +29,17 @@ export function IdentityFieldEditor({
         </div>
       </div>
       <IdentityFieldForm templateId={templateId} field={field} />
-      <form action={deleteIdentityFieldAction} className="mt-3">
+      <ActionForm
+        action={deleteIdentityFieldAction}
+        className="mt-3"
+        successMessage="Header identitas dihapus."
+        errorMessage="Header gagal dihapus"
+      >
         <input type="hidden" name="fieldId" value={field.id} />
         <Button type="submit" variant="destructive" size="sm">
           Hapus field
         </Button>
-      </form>
+      </ActionForm>
     </div>
   );
 }

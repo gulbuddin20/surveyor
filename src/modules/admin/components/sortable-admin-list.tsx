@@ -23,6 +23,7 @@ import type { ReactNode } from "react";
 import { useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 
 export type SortableAdminItem = {
@@ -182,6 +183,7 @@ export function SortableAdminList({
   const itemRects = useRef<Record<string, DragPreviewSize>>({});
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: { distance: 4 },
@@ -196,10 +198,24 @@ export function SortableAdminList({
 
     setError(null);
     startTransition(() => {
-      void reorderAction(nextItems.map((item) => item.id)).catch((caught: unknown) => {
-        setOrderedItems(items);
-        setError(caught instanceof Error ? caught.message : "Gagal menyimpan urutan.");
-      });
+      void reorderAction(nextItems.map((item) => item.id))
+        .then(() => {
+          toast({
+            title: "Urutan disimpan",
+            description: "Perubahan urutan berhasil disimpan.",
+            variant: "success",
+          });
+        })
+        .catch((caught: unknown) => {
+          const message = caught instanceof Error ? caught.message : "Gagal menyimpan urutan.";
+          setOrderedItems(items);
+          setError(message);
+          toast({
+            title: "Urutan gagal disimpan",
+            description: message,
+            variant: "error",
+          });
+        });
     });
   };
 

@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { ActionForm } from "@/components/ui/action-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +14,13 @@ export function IdentityFieldForm({
   field?: TemplateIdentityField;
 }) {
   return (
-    <form action={saveIdentityFieldAction} className="atlas-fieldset grid gap-3 rounded-[1.5rem] p-4 lg:grid-cols-12">
+    <ActionForm
+      action={saveIdentityFieldAction}
+      className="atlas-fieldset grid gap-3 rounded-[1.5rem] p-4 lg:grid-cols-12"
+      resetOnSuccess={!field}
+      successMessage={field ? "Header identitas diperbarui." : "Header identitas ditambahkan."}
+      errorMessage="Header gagal disimpan"
+    >
       <input type="hidden" name="templateId" value={templateId} />
       {field ? <input type="hidden" name="fieldId" value={field.id} /> : null}
       <div className="space-y-2 lg:col-span-3">
@@ -68,6 +75,6 @@ export function IdentityFieldForm({
           {field ? "Update" : "Tambah field"}
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }

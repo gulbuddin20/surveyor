@@ -5,8 +5,9 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ActionForm } from "@/components/ui/action-form";
 import type { SurveyTemplate, TemplateAdminDetail } from "@/lib/types";
-import { createTemplateAction, deleteTemplateAction } from "@/modules/admin/controllers/admin.controller";
+import { createTemplateInlineAction, deleteTemplateInlineAction } from "@/modules/admin/controllers/admin.controller";
 import { TemplateEditor } from "@/modules/admin/components/template-editor";
 
 export function TemplateManagement({
@@ -39,7 +40,13 @@ export function TemplateManagement({
               <CardTitle>Template baru</CardTitle>
               <CardDescription>Buat jenis formulir IKL baru.</CardDescription>
             </CardHeader>
-            <form action={createTemplateAction} className="space-y-4">
+            <ActionForm
+              action={createTemplateInlineAction}
+              className="space-y-4"
+              resetOnSuccess
+              successMessage="Template berhasil dibuat"
+              errorMessage="Template gagal dibuat"
+            >
               <Input name="code" placeholder="kode-template" required />
               <Input name="name" placeholder="Nama template" required />
               <Textarea name="description" placeholder="Deskripsi" />
@@ -63,7 +70,7 @@ export function TemplateManagement({
                 <option value="archived">Archived</option>
               </select>
               <Button type="submit" className="w-full">Simpan template</Button>
-            </form>
+            </ActionForm>
           </Card>
           <Card>
             <CardHeader>
@@ -97,7 +104,12 @@ function TemplateLink({ template, active }: { template: SurveyTemplate; active: 
           <Badge className="bg-[color:rgba(22,37,29,0.08)] text-[var(--atlas-ink)]">/{Number(template.denominator)}</Badge>
         </div>
       </Link>
-      <form action={deleteTemplateAction} className="mt-3">
+      <ActionForm
+        action={deleteTemplateInlineAction}
+        className="mt-3"
+        successMessage="Template berhasil dihapus"
+        errorMessage="Template gagal dihapus"
+      >
         <input type="hidden" name="templateId" value={template.id} />
         <Button
           type="submit"
@@ -108,7 +120,7 @@ function TemplateLink({ template, active }: { template: SurveyTemplate; active: 
         >
           Hapus template
         </Button>
-      </form>
+      </ActionForm>
     </div>
   );
 }

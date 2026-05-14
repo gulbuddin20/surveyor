@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { ActionForm } from "@/components/ui/action-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +16,13 @@ export function ResponseFieldForm({
   const maxSizeMb = typeof field?.settings?.max_size_mb === "number" ? field.settings.max_size_mb : 10;
 
   return (
-    <form action={saveResponseFieldAction} className="atlas-fieldset grid gap-3 rounded-[1.5rem] p-4 lg:grid-cols-12">
+    <ActionForm
+      action={saveResponseFieldAction}
+      className="atlas-fieldset grid gap-3 rounded-[1.5rem] p-4 lg:grid-cols-12"
+      resetOnSuccess={!field}
+      successMessage={field ? "Field setelah kuesioner diperbarui." : "Field setelah kuesioner ditambahkan."}
+      errorMessage="Field gagal disimpan"
+    >
       <input type="hidden" name="templateId" value={templateId} />
       {field ? <input type="hidden" name="fieldId" value={field.id} /> : null}
       <div className="space-y-2 lg:col-span-3">
@@ -71,6 +78,6 @@ export function ResponseFieldForm({
           {field ? "Update" : "Tambah field"}
         </Button>
       </div>
-    </form>
+    </ActionForm>
   );
 }

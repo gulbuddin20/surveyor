@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { ActionForm } from "@/components/ui/action-form";
 import { Button } from "@/components/ui/button";
 import type { TemplateResponseField } from "@/lib/types";
 import { deleteResponseFieldAction } from "@/modules/admin/controllers/admin.controller";
@@ -28,12 +29,17 @@ export function ResponseFieldEditor({
         </div>
       </div>
       <ResponseFieldForm templateId={templateId} field={field} />
-      <form action={deleteResponseFieldAction} className="mt-3">
+      <ActionForm
+        action={deleteResponseFieldAction}
+        className="mt-3"
+        successMessage="Field setelah kuesioner dihapus."
+        errorMessage="Field gagal dihapus"
+      >
         <input type="hidden" name="fieldId" value={field.id} />
         <Button type="submit" variant="destructive" size="sm">
           Hapus field
         </Button>
-      </form>
+      </ActionForm>
     </div>
   );
 }

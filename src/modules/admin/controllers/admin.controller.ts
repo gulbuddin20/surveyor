@@ -72,6 +72,13 @@ export async function createTemplateAction(formData: FormData) {
   redirect(`/admin/templates?template=${templateId}`);
 }
 
+export async function createTemplateInlineAction(formData: FormData) {
+  await requireSuperAdmin();
+  const result = await createTemplateFromForm(formData);
+  if (!result.ok) throw new Error(result.message ?? "Gagal membuat template");
+  revalidatePath("/admin/templates");
+}
+
 export async function deleteTemplateAction(formData: FormData) {
   await requireSuperAdmin();
   const result = await removeTemplateFromForm(formData).catch((error: unknown) => ({
@@ -81,6 +88,13 @@ export async function deleteTemplateAction(formData: FormData) {
   if (!result.ok) redirect(`/admin/templates?error=${encodeURIComponent(result.message ?? "Gagal menghapus template")}`);
   revalidatePath("/admin/templates");
   redirect("/admin/templates");
+}
+
+export async function deleteTemplateInlineAction(formData: FormData) {
+  await requireSuperAdmin();
+  const result = await removeTemplateFromForm(formData);
+  if (!result.ok) throw new Error(result.message ?? "Gagal menghapus template");
+  revalidatePath("/admin/templates");
 }
 
 export async function updateFormulaAction(formData: FormData) {
