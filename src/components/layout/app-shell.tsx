@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { ClipboardList, FileClock, FileText, LayoutDashboard, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, Users } from "lucide-react";
+import { FiklingoLogo } from "@/components/brand/fiklingo-logo";
 import { Button } from "@/components/ui/button";
 import type { Profile } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -45,15 +46,15 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
         <div className="relative overflow-hidden rounded-[1.75rem] border border-[color:rgba(255,249,234,0.18)] bg-[color:rgba(255,249,234,0.08)] px-4 py-4 md:group-has-[[data-sidebar='collapsed']:checked]/shell:px-3">
           <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[var(--atlas-coral)]/30 blur-2xl" />
           <div className="relative flex min-h-14 items-center justify-between gap-3 md:group-has-[[data-sidebar='collapsed']:checked]/shell:justify-center">
-            <div className="min-w-0 md:group-has-[[data-sidebar='collapsed']:checked]/shell:hidden">
-              <p className="atlas-heading truncate text-2xl font-black">Surveyor IKL</p>
-              <p className="truncate text-xs font-bold uppercase tracking-[0.22em] text-[color:rgba(255,249,234,0.66)]">
-                Permenkes 17/2024
-              </p>
-            </div>
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--atlas-paper)] text-sm font-black text-[var(--atlas-jungle)] ring-1 ring-white/30">
-              IKL
-            </span>
+            <FiklingoLogo
+              className="text-[var(--atlas-paper)] md:group-has-[[data-sidebar='collapsed']:checked]/shell:hidden"
+              markClassName="rounded-2xl ring-white/30"
+            />
+            <FiklingoLogo
+              showText={false}
+              className="hidden md:group-has-[[data-sidebar='collapsed']:checked]/shell:flex"
+              markClassName="h-11 w-11 rounded-2xl ring-white/30"
+            />
           </div>
         </div>
 

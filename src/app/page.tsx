@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, ClipboardCheck, ShieldCheck, Smartphone } from "lucide-react";
+import { FiklingoLogo } from "@/components/brand/fiklingo-logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -28,13 +29,15 @@ export default function Home() {
       <div className="absolute -left-28 bottom-12 h-80 w-80 rounded-full bg-[var(--atlas-lagoon)]/18 blur-3xl" />
       <section className="relative mx-auto grid min-h-screen max-w-7xl items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:px-8">
         <div className="atlas-reveal max-w-4xl">
-          <p className="atlas-kicker">Surveyor IKL</p>
+          <FiklingoLogo markClassName="h-16 w-16 rounded-3xl" />
           <h1 className="atlas-heading mt-6 max-w-4xl text-5xl font-black leading-[0.92] text-[var(--atlas-ink)] sm:text-7xl lg:text-8xl">
-            Atlas lapangan untuk inspeksi kesehatan lingkungan.
+            FIKLINGO
           </h1>
-          <p className="mt-6 max-w-2xl text-lg font-medium leading-8 text-[color:rgba(22,37,29,0.68)]">
-            Formulir IKL Permenkes 17/2024 yang terasa seperti peta kerja surveyor: cepat dibaca, siap mobile,
-            dan tetap presisi untuk admin regulasi.
+          <p className="mt-3 max-w-2xl text-2xl font-black text-[var(--atlas-canopy)]">
+            Form Kesehatan Lingkungan Online
+          </p>
+          <p className="mt-5 max-w-2xl text-lg font-medium leading-8 text-[color:rgba(22,37,29,0.68)]">
+            Mudah, cepat, dan akurat untuk inspeksi kesehatan lingkungan: siap mobile untuk surveyor, tetap presisi untuk admin regulasi.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button asChild size="lg"><Link href="/login">Masuk aplikasi <ArrowRight className="h-4 w-4" /></Link></Button>

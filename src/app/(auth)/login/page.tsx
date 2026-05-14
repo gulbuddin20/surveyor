@@ -1,3 +1,4 @@
+import { FiklingoLogo } from "@/components/brand/fiklingo-logo";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoginForm } from "@/modules/auth/components/login-form";
 
@@ -7,10 +8,10 @@ export default function LoginPage() {
       <div className="absolute left-1/2 top-12 h-72 w-72 -translate-x-1/2 rounded-full bg-[var(--atlas-lagoon)]/20 blur-3xl" />
       <Card className="atlas-reveal relative w-full max-w-md">
         <CardHeader>
-          <p className="atlas-kicker w-fit">Field access</p>
-          <CardTitle className="mt-4 text-4xl">Surveyor IKL</CardTitle>
+          <FiklingoLogo markClassName="h-16 w-16 rounded-3xl" />
+          <CardTitle className="mt-5 text-4xl">FIKLINGO</CardTitle>
           <CardDescription>
-            Masuk untuk mengelola dan mengisi inspeksi kesehatan lingkungan.
+            Form Kesehatan Lingkungan Online. Masuk untuk mengelola dan mengisi inspeksi kesehatan lingkungan.
           </CardDescription>
         </CardHeader>
         <LoginForm />

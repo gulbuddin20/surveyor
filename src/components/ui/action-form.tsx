@@ -5,6 +5,7 @@ import type { FormHTMLAttributes } from "react";
 import { useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toaster";
+import { cn } from "@/lib/utils";
 
 type ActionFormProps = Omit<FormHTMLAttributes<HTMLFormElement>, "action" | "onSubmit"> & {
   action: (formData: FormData) => Promise<void>;
@@ -21,6 +22,7 @@ type ActionFormProps = Omit<FormHTMLAttributes<HTMLFormElement>, "action" | "onS
 export function ActionForm({
   action,
   children,
+  className,
   confirmActionLabel = "Ya, lanjutkan",
   confirmDescription = "Perubahan ini akan disimpan ke database. Pastikan data sudah benar.",
   confirmTitle = "Konfirmasi perubahan",
@@ -88,7 +90,10 @@ export function ActionForm({
           submitFormData(formData);
         }}
       >
-        <fieldset className="contents" disabled={isSubmitting || isConfirmOpen}>
+        <fieldset
+          className={cn("min-w-0 border-0 p-0 disabled:opacity-70", className)}
+          disabled={isSubmitting || isConfirmOpen}
+        >
           {children}
         </fieldset>
       </form>
