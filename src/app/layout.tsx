@@ -3,8 +3,13 @@ import { AppToaster } from "@/components/ui/toaster";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Surveyor IKL",
-  description: "Paperless IKL survey app for MSME/TPP inspections",
+  title: "FIKLINGO",
+  description: "Form Kesehatan Lingkungan Online",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
