@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, GripVertical } from "lucide-react";
 import type { DragEvent, PointerEvent, ReactNode } from "react";
 import { createContext, useContext, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import type { SortableAdminItem } from "@/modules/admin/components/sortable-admin-list";
 
@@ -44,11 +45,13 @@ type SectionDragContextValue = {
   error: string | null;
   isPending: boolean;
   itemMap: Map<string, SortableAdminItem>;
+  overContainerId: string | null;
   dropOnContainer: (containerId: string) => void;
   dropOnItem: (overId: string) => void;
   endDrag: () => void;
   moveByButton: (id: string, direction: -1 | 1) => void;
   moveOverItem: (overId: string) => void;
+  setOverContainerId: (id: string | null) => void;
   setDragHandleId: (id: string | null) => void;
   startDrag: (id: string, event: DragEvent<HTMLDivElement>) => void;
 };
@@ -153,6 +156,7 @@ function SectionSortableCard({
     activeId,
     dragHandleId,
     isPending,
+    setOverContainerId,
     dropOnItem,
     endDrag,
     moveByButton,
@@ -173,6 +177,7 @@ function SectionSortableCard({
       onDragStart={(event) => startDrag(item.id, event)}
       onDragOver={(event) => {
         event.preventDefault();
+        setOverContainerId(containerId);
         moveOverItem(item.id);
       }}
       onDrop={(event) => {
@@ -232,20 +237,24 @@ function SectionSortableCard({
 }
 
 export function SectionSortableList({ parentId, empty, className }: SectionSortableListProps) {
-  const { activeId, containerItems, error, itemMap, dropOnContainer } = useSectionDragContext();
+  const { activeId, containerItems, error, itemMap, overContainerId, dropOnContainer, setOverContainerId } = useSectionDragContext();
   const containerId = containerIdForParent(parentId);
   const sectionIds = containerItems[containerId] ?? [];
+  const isOver = overContainerId === containerId;
 
   return (
     <div
       className={cn(
         "space-y-4 rounded-[1.75rem] transition",
-        activeId ? "min-h-12 ring-1 ring-dashed ring-[color:rgba(22,37,29,0.12)]" : null,
+        activeId ? "min-h-16 border border-dashed border-[color:rgba(22,37,29,0.14)] p-2" : null,
+        isOver ? "border-[color:rgba(15,107,79,0.4)] bg-[color:rgba(121,168,77,0.12)] ring-2 ring-[color:rgba(15,107,79,0.22)]" : null,
         className,
       )}
       onDragOver={(event) => {
         event.preventDefault();
+        setOverContainerId(containerId);
       }}
+      onDragLeave={() => setOverContainerId(null)}
       onDrop={(event) => {
         event.preventDefault();
         dropOnContainer(containerId);
@@ -254,6 +263,11 @@ export function SectionSortableList({ parentId, empty, className }: SectionSorta
       {error ? (
         <p className="rounded-2xl border border-[color:rgba(242,111,76,0.26)] bg-[color:rgba(242,111,76,0.08)] px-3 py-2 text-sm font-bold text-[var(--atlas-coral)]">
           {error}
+        </p>
+      ) : null}
+      {isOver ? (
+        <p className="rounded-2xl border border-[color:rgba(15,107,79,0.18)] bg-[color:rgba(255,249,234,0.76)] px-3 py-2 text-xs font-black uppercase tracking-[0.14em] text-[var(--atlas-canopy)]">
+          Lepas bagian di sini
         </p>
       ) : null}
       {sectionIds.length ? sectionIds.map((sectionId, index) => {
@@ -269,7 +283,13 @@ export function SectionSortableList({ parentId, empty, className }: SectionSorta
           />
         );
       }) : (
-        empty ?? null
+        empty ?? (
+          activeId ? (
+            <p className="rounded-2xl border border-dashed border-[color:rgba(15,107,79,0.28)] bg-[color:rgba(121,168,77,0.08)] px-4 py-5 text-sm font-bold text-[var(--atlas-canopy)]">
+              Drop bagian ke sini
+            </p>
+          ) : null
+        )
       )}
     </div>
   );
@@ -284,23 +304,39 @@ export function SectionDragScope({
   const [containerItems, setContainerItems] = useState(() => createInitialContainerItems(containers));
   const [activeId, setActiveId] = useState<string | null>(null);
   const [dragHandleId, setDragHandleId] = useState<string | null>(null);
+  const [overContainerId, setOverContainerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const latestContainerItems = useRef(containerItems);
   const dragStartContainerItems = useRef(containerItems);
   const didDrop = useRef(false);
   const itemMap = new Map(items.map((item) => [item.id, item]));
+  const { toast } = useToast();
 
   const persistOrder = (nextContainerItems: Record<string, string[]>) => {
     latestContainerItems.current = nextContainerItems;
     setError(null);
     startTransition(() => {
-      void reorderAction(createSectionOrders(nextContainerItems)).catch((caught: unknown) => {
-        const resetItems = createInitialContainerItems(containers);
-        latestContainerItems.current = resetItems;
-        setContainerItems(resetItems);
-        setError(caught instanceof Error ? caught.message : "Gagal menyimpan perpindahan bagian.");
-      });
+      void reorderAction(createSectionOrders(nextContainerItems))
+        .then(() => {
+          toast({
+            title: "Bagian dipindahkan",
+            description: "Urutan dan induk bagian berhasil disimpan.",
+            variant: "success",
+          });
+        })
+        .catch((caught: unknown) => {
+          const message = caught instanceof Error ? caught.message : "Gagal menyimpan perpindahan bagian.";
+          const resetItems = createInitialContainerItems(containers);
+          latestContainerItems.current = resetItems;
+          setContainerItems(resetItems);
+          setError(message);
+          toast({
+            title: "Bagian gagal dipindahkan",
+            description: message,
+            variant: "error",
+          });
+        });
     });
   };
 
@@ -351,6 +387,7 @@ export function SectionDragScope({
     persistOrder(next);
     setActiveId(null);
     setDragHandleId(null);
+    setOverContainerId(null);
   };
 
   const dropOnContainer = (containerId: string) => {
@@ -361,6 +398,7 @@ export function SectionDragScope({
     persistOrder(next);
     setActiveId(null);
     setDragHandleId(null);
+    setOverContainerId(null);
   };
 
   const endDrag = () => {
@@ -370,6 +408,7 @@ export function SectionDragScope({
     }
     setActiveId(null);
     setDragHandleId(null);
+    setOverContainerId(null);
     didDrop.current = false;
   };
 
@@ -382,11 +421,13 @@ export function SectionDragScope({
         error,
         isPending,
         itemMap,
+        overContainerId,
         dropOnContainer,
         dropOnItem,
         endDrag,
         moveByButton,
         moveOverItem,
+        setOverContainerId,
         setDragHandleId,
         startDrag,
       }}

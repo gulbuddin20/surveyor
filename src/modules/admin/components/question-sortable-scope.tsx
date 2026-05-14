@@ -25,6 +25,7 @@ import type { ReactNode } from "react";
 import { createContext, useContext, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import type { SortableAdminItem } from "@/modules/admin/components/sortable-admin-list";
 
@@ -188,18 +189,30 @@ function QuestionDragPreview({ item, size }: { item: SortableAdminItem; size: Dr
 }
 
 export function QuestionSortableList({ sectionId, empty }: QuestionSortableListProps) {
-  const { containerItems, itemMap, error } = useQuestionDragContext();
+  const { activeId, containerItems, itemMap, error } = useQuestionDragContext();
   const { setNodeRef, isOver } = useDroppable({ id: sectionId });
   const questionIds = containerItems[sectionId] ?? [];
 
   return (
-    <div ref={setNodeRef} className={cn("space-y-3 rounded-[1.75rem] transition", isOver ? "bg-[color:rgba(242,111,76,0.06)] ring-2 ring-[color:rgba(242,111,76,0.22)]" : null)}>
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "space-y-3 rounded-[1.75rem] transition",
+        activeId ? "min-h-16 border border-dashed border-[color:rgba(22,37,29,0.14)] p-2" : null,
+        isOver ? "border-[color:rgba(15,107,79,0.4)] bg-[color:rgba(121,168,77,0.12)] ring-2 ring-[color:rgba(15,107,79,0.22)]" : null,
+      )}
+    >
       {error ? (
         <p className="rounded-2xl border border-[color:rgba(242,111,76,0.26)] bg-[color:rgba(242,111,76,0.08)] px-3 py-2 text-sm font-bold text-[var(--atlas-coral)]">
           {error}
         </p>
       ) : null}
       <SortableContext items={questionIds} strategy={verticalListSortingStrategy}>
+        {isOver ? (
+          <p className="rounded-2xl border border-[color:rgba(15,107,79,0.18)] bg-[color:rgba(255,249,234,0.76)] px-3 py-2 text-xs font-black uppercase tracking-[0.14em] text-[var(--atlas-canopy)]">
+            Lepas pertanyaan di sini
+          </p>
+        ) : null}
         {questionIds.length ? questionIds.map((questionId, index) => {
           const item = itemMap.get(questionId);
           if (!item) return null;
@@ -213,8 +226,13 @@ export function QuestionSortableList({ sectionId, empty }: QuestionSortableListP
           );
         }) : (
           empty ?? (
-            <p className="rounded-2xl border border-dashed border-[color:rgba(22,37,29,0.16)] px-4 py-5 text-sm text-[color:rgba(22,37,29,0.58)]">
-              Belum ada pertanyaan. Drag pertanyaan ke bagian ini atau tambah pertanyaan baru.
+            <p className={cn(
+              "rounded-2xl border border-dashed px-4 py-5 text-sm transition",
+              activeId
+                ? "border-[color:rgba(15,107,79,0.28)] bg-[color:rgba(121,168,77,0.08)] font-bold text-[var(--atlas-canopy)]"
+                : "border-[color:rgba(22,37,29,0.16)] text-[color:rgba(22,37,29,0.58)]",
+            )}>
+              {activeId ? "Drop pertanyaan ke sini" : "Belum ada pertanyaan. Drag pertanyaan ke bagian ini atau tambah pertanyaan baru."}
             </p>
           )
         )}
@@ -238,6 +256,7 @@ export function QuestionDragScope({
   const dragStartContainerItems = useRef(containerItems);
   const itemRects = useRef<Record<string, DragPreviewSize>>({});
   const itemMap = new Map(items.map((item) => [item.id, item]));
+  const { toast } = useToast();
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: { distance: 4 },
@@ -251,12 +270,26 @@ export function QuestionDragScope({
     latestContainerItems.current = nextContainerItems;
     setError(null);
     startTransition(() => {
-      void reorderAction(createSectionOrders(nextContainerItems)).catch((caught: unknown) => {
-        const resetItems = createInitialContainerItems(containers);
-        latestContainerItems.current = resetItems;
-        setContainerItems(resetItems);
-        setError(caught instanceof Error ? caught.message : "Gagal menyimpan perpindahan pertanyaan.");
-      });
+      void reorderAction(createSectionOrders(nextContainerItems))
+        .then(() => {
+          toast({
+            title: "Pertanyaan dipindahkan",
+            description: "Urutan dan bagian pertanyaan berhasil disimpan.",
+            variant: "success",
+          });
+        })
+        .catch((caught: unknown) => {
+          const message = caught instanceof Error ? caught.message : "Gagal menyimpan perpindahan pertanyaan.";
+          const resetItems = createInitialContainerItems(containers);
+          latestContainerItems.current = resetItems;
+          setContainerItems(resetItems);
+          setError(message);
+          toast({
+            title: "Pertanyaan gagal dipindahkan",
+            description: message,
+            variant: "error",
+          });
+        });
     });
   };
 

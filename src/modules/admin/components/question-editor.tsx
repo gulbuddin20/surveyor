@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { ActionForm } from "@/components/ui/action-form";
 import { Button } from "@/components/ui/button";
 import type { SurveyQuestion, SurveySection } from "@/lib/types";
 import { deleteQuestionAction } from "@/modules/admin/controllers/admin.controller";
@@ -28,10 +29,15 @@ export function QuestionEditor({
         </div>
       </div>
       <QuestionForm templateId={templateId} question={question} sections={sections} />
-      <form action={deleteQuestionAction} className="mt-3">
+      <ActionForm
+        action={deleteQuestionAction}
+        className="mt-3"
+        successMessage="Pertanyaan dihapus."
+        errorMessage="Pertanyaan gagal dihapus"
+      >
         <input type="hidden" name="questionId" value={question.id} />
         <Button type="submit" variant="destructive" size="sm">Hapus pertanyaan</Button>
-      </form>
+      </ActionForm>
     </div>
   );
 }

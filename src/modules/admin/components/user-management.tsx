@@ -1,3 +1,4 @@
+import { ActionForm } from "@/components/ui/action-form";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,13 @@ export function UserManagement({ users }: { users: Profile[] }) {
           <CardTitle>Tambah user</CardTitle>
           <CardDescription>Buat akun surveyor atau super admin.</CardDescription>
         </CardHeader>
-        <form action={createUserAction} className="space-y-4">
+        <ActionForm
+          action={createUserAction}
+          className="space-y-4"
+          resetOnSuccess
+          successMessage="User baru dibuat."
+          errorMessage="User gagal dibuat"
+        >
           <div className="space-y-2">
             <Label htmlFor="fullName">Nama</Label>
             <Input id="fullName" name="fullName" required />
@@ -37,7 +44,7 @@ export function UserManagement({ users }: { users: Profile[] }) {
             <input name="isActive" type="checkbox" defaultChecked /> Aktif
           </label>
           <Button type="submit" className="w-full">Simpan user</Button>
-        </form>
+        </ActionForm>
       </Card>
       <Card>
         <CardHeader>
