@@ -2,6 +2,7 @@
 
 import { ArrowDown, ArrowUp, GripVertical } from "lucide-react";
 import type { DragEvent, PointerEvent, ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { createContext, useContext, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toaster";
@@ -311,6 +312,7 @@ export function SectionDragScope({
   const dragStartContainerItems = useRef(containerItems);
   const didDrop = useRef(false);
   const itemMap = new Map(items.map((item) => [item.id, item]));
+  const router = useRouter();
   const { toast } = useToast();
 
   const persistOrder = (nextContainerItems: Record<string, string[]>) => {
@@ -319,6 +321,7 @@ export function SectionDragScope({
     startTransition(() => {
       void reorderAction(createSectionOrders(nextContainerItems))
         .then(() => {
+          router.refresh();
           toast({
             title: "Bagian dipindahkan",
             description: "Urutan dan induk bagian berhasil disimpan.",

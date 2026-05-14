@@ -3,6 +3,7 @@ import { Download, Eye, FilePenLine } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { formatDate, formatNumber } from "@/lib/utils";
 import type { SurveyHistoryPage } from "@/lib/types";
 
@@ -29,9 +30,9 @@ export function SurveyHistoryTable({ history }: { history: SurveyHistoryPage }) 
               </option>
             ))}
           </select>
-          <Button type="submit" variant="outline" size="sm">
+          <SubmitButton variant="outline" size="sm" pendingLabel="Menerapkan...">
             Terapkan
-          </Button>
+          </SubmitButton>
         </form>
       </CardHeader>
 
