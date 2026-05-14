@@ -29,6 +29,59 @@ function flattenSections(sections: SectionWithQuestions[]): SectionWithQuestions
   return sections.flatMap((section) => [section, ...flattenSections(section.children)]);
 }
 
+function identityFieldVersion(field: TemplateAdminDetail["identityFields"][number]) {
+  return [
+    field.id,
+    field.label,
+    field.field_key,
+    field.field_type,
+    field.placeholder,
+    field.options.join(","),
+    field.is_required,
+    field.is_active,
+    field.sort_order,
+  ].join(":");
+}
+
+function responseFieldVersion(field: TemplateAdminDetail["responseFields"][number]) {
+  return [
+    field.id,
+    field.label,
+    field.field_key,
+    field.field_type,
+    field.placeholder,
+    field.options.join(","),
+    field.is_required,
+    field.is_active,
+    field.sort_order,
+    typeof field.settings?.max_size_mb === "number" ? field.settings.max_size_mb : "",
+  ].join(":");
+}
+
+function sectionVersion(section: SectionWithQuestions) {
+  return [
+    section.id,
+    section.title,
+    section.parent_id,
+    section.is_active,
+    section.sort_order,
+  ].join(":");
+}
+
+function questionVersion(question: SectionWithQuestions["questions"][number]) {
+  return [
+    question.id,
+    question.label,
+    question.help_text,
+    question.question_type,
+    question.weight,
+    question.is_required,
+    question.is_active,
+    question.sort_order,
+    question.section_id,
+  ].join(":");
+}
+
 export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
   const reorderIdentityAction = reorderIdentityFieldsAction.bind(null, detail.id);
   const reorderResponseAction = reorderResponseFieldsAction.bind(null, detail.id);
@@ -48,7 +101,7 @@ export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
   const sectionItems = allSections.map((section) => ({
     id: section.id,
     label: section.title,
-    node: <SectionEditor templateId={detail.id} section={section} sections={detail.flatSections} />,
+    node: <SectionEditor key={sectionVersion(section)} templateId={detail.id} section={section} sections={detail.flatSections} />,
   }));
   const questionContainers = allSections.map((section) => ({
     sectionId: section.id,
@@ -58,7 +111,7 @@ export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
   const questionItems = allSections.flatMap((section) => section.questions.map((question) => ({
     id: question.id,
     label: question.label,
-    node: <QuestionEditor templateId={detail.id} question={question} sections={detail.flatSections} />,
+    node: <QuestionEditor key={questionVersion(question)} templateId={detail.id} question={question} sections={detail.flatSections} />,
   })));
 
   return (
@@ -93,14 +146,14 @@ export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
           </div>
         </details>
         <SortableAdminList
-          key={detail.identityFields.map((field) => `${field.id}:${field.sort_order}:${field.updated_at}`).join("|")}
+          key={detail.identityFields.map(identityFieldVersion).join("|")}
           className="mt-4"
           reorderAction={reorderIdentityAction}
           empty={<p className="mt-4 text-sm text-[color:rgba(22,37,29,0.58)]">Belum ada header. Klik Tambah header untuk mulai dari kosong.</p>}
           items={detail.identityFields.map((field) => ({
             id: field.id,
             label: field.label,
-            node: <IdentityFieldEditor templateId={detail.id} field={field} />,
+            node: <IdentityFieldEditor key={identityFieldVersion(field)} templateId={detail.id} field={field} />,
           }))}
         />
       </Card>
@@ -133,14 +186,14 @@ export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
           </div>
         </details>
         <SortableAdminList
-          key={detail.responseFields.map((field) => `${field.id}:${field.sort_order}:${field.updated_at}`).join("|")}
+          key={detail.responseFields.map(responseFieldVersion).join("|")}
           className="mt-4"
           reorderAction={reorderResponseAction}
           empty={<p className="mt-4 text-sm text-[color:rgba(22,37,29,0.58)]">Belum ada field setelah kuesioner.</p>}
           items={detail.responseFields.map((field) => ({
             id: field.id,
             label: field.label,
-            node: <ResponseFieldEditor templateId={detail.id} field={field} />,
+            node: <ResponseFieldEditor key={responseFieldVersion(field)} templateId={detail.id} field={field} />,
           }))}
         />
       </Card>

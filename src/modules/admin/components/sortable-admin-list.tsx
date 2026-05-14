@@ -18,6 +18,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, GripVertical } from "lucide-react";
 import type { ReactNode } from "react";
 import { useRef, useState, useTransition } from "react";
@@ -183,6 +184,7 @@ export function SortableAdminList({
   const itemRects = useRef<Record<string, DragPreviewSize>>({});
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
   const { toast } = useToast();
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -200,6 +202,7 @@ export function SortableAdminList({
     startTransition(() => {
       void reorderAction(nextItems.map((item) => item.id))
         .then(() => {
+          router.refresh();
           toast({
             title: "Urutan disimpan",
             description: "Perubahan urutan berhasil disimpan.",

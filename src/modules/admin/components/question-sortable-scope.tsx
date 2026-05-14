@@ -20,6 +20,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, GripVertical } from "lucide-react";
 import type { ReactNode } from "react";
 import { createContext, useContext, useRef, useState, useTransition } from "react";
@@ -256,6 +257,7 @@ export function QuestionDragScope({
   const dragStartContainerItems = useRef(containerItems);
   const itemRects = useRef<Record<string, DragPreviewSize>>({});
   const itemMap = new Map(items.map((item) => [item.id, item]));
+  const router = useRouter();
   const { toast } = useToast();
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -272,6 +274,7 @@ export function QuestionDragScope({
     startTransition(() => {
       void reorderAction(createSectionOrders(nextContainerItems))
         .then(() => {
+          router.refresh();
           toast({
             title: "Pertanyaan dipindahkan",
             description: "Urutan dan bagian pertanyaan berhasil disimpan.",

@@ -21,6 +21,7 @@ export function ActionForm({
   ...props
 }: ActionFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
+  const isSubmittingRef = useRef(false);
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,10 +33,11 @@ export function ActionForm({
       aria-busy={isSubmitting}
       onSubmit={(event) => {
         event.preventDefault();
-        if (isSubmitting) return;
+        if (isSubmittingRef.current) return;
 
         const form = event.currentTarget;
         const formData = new FormData(form);
+        isSubmittingRef.current = true;
         setIsSubmitting(true);
 
         void action(formData)
@@ -55,7 +57,10 @@ export function ActionForm({
               variant: "error",
             });
           })
-          .finally(() => setIsSubmitting(false));
+          .finally(() => {
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
+          });
       }}
     >
       <fieldset className="contents" disabled={isSubmitting}>
