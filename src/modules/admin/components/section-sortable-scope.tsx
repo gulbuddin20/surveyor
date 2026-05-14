@@ -1,29 +1,8 @@
 "use client";
 
-import {
-  closestCenter,
-  DndContext,
-  DragOverlay,
-  MouseSensor,
-  TouchSensor,
-  type DragEndEvent,
-  type DragOverEvent,
-  type DragStartEvent,
-  useDroppable,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { ArrowDown, ArrowUp, GripVertical } from "lucide-react";
-import type { ReactNode } from "react";
+import type { DragEvent, PointerEvent, ReactNode } from "react";
 import { createContext, useContext, useRef, useState, useTransition } from "react";
-import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { SortableAdminItem } from "@/modules/admin/components/sortable-admin-list";
@@ -51,22 +30,30 @@ type SectionSortableListProps = {
   className?: string;
 };
 
-type DragPreviewSize = {
-  width: number;
-  height: number;
-} | null;
+type SectionSortableCardProps = {
+  containerId: string;
+  index: number;
+  item: SortableAdminItem;
+  totalItems: number;
+};
 
 type SectionDragContextValue = {
+  activeId: string | null;
   containerItems: Record<string, string[]>;
+  dragHandleId: string | null;
   error: string | null;
   isPending: boolean;
   itemMap: Map<string, SortableAdminItem>;
-  measureItem: (id: string, rect: DOMRect) => void;
+  dropOnContainer: (containerId: string) => void;
+  dropOnItem: (overId: string) => void;
+  endDrag: () => void;
   moveByButton: (id: string, direction: -1 | 1) => void;
+  moveOverItem: (overId: string) => void;
+  setDragHandleId: (id: string | null) => void;
+  startDrag: (id: string, event: DragEvent<HTMLDivElement>) => void;
 };
 
 const ROOT_CONTAINER_ID = "__root_sections__";
-const TOUCH_LONG_PRESS_MS = 2000;
 const SectionDragContext = createContext<SectionDragContextValue | null>(null);
 
 function containerIdForParent(parentId: string | null) {
@@ -101,36 +88,100 @@ function useSectionDragContext() {
   return context;
 }
 
+function moveItemBefore(
+  current: Record<string, string[]>,
+  activeId: string,
+  overId: string,
+) {
+  const activeContainerId = findContainer(current, activeId);
+  const overContainerId = findContainer(current, overId);
+  if (!activeContainerId || !overContainerId) return current;
+
+  const activeItems = current[activeContainerId] ?? [];
+  const overItems = current[overContainerId] ?? [];
+  const activeIndex = activeItems.indexOf(activeId);
+  const overIndex = overItems.indexOf(overId);
+  if (activeIndex < 0 || overIndex < 0) return current;
+  if (activeContainerId === overContainerId && activeIndex === overIndex) return current;
+
+  const nextActiveItems = activeItems.filter((id) => id !== activeId);
+  const nextOverItems = activeContainerId === overContainerId ? nextActiveItems : overItems;
+  const adjustedOverIndex = activeContainerId === overContainerId && activeIndex < overIndex
+    ? overIndex - 1
+    : overIndex;
+
+  return {
+    ...current,
+    [activeContainerId]: nextActiveItems,
+    [overContainerId]: [
+      ...nextOverItems.slice(0, adjustedOverIndex),
+      activeId,
+      ...nextOverItems.slice(adjustedOverIndex),
+    ],
+  };
+}
+
+function moveItemToContainerEnd(
+  current: Record<string, string[]>,
+  activeId: string,
+  targetContainerId: string,
+) {
+  const activeContainerId = findContainer(current, activeId);
+  if (!activeContainerId || !(targetContainerId in current)) return current;
+
+  const activeItems = current[activeContainerId] ?? [];
+  const targetItems = current[targetContainerId] ?? [];
+  if (activeContainerId === targetContainerId && targetItems.at(-1) === activeId) return current;
+
+  return {
+    ...current,
+    [activeContainerId]: activeItems.filter((id) => id !== activeId),
+    [targetContainerId]: [
+      ...targetItems.filter((id) => id !== activeId),
+      activeId,
+    ],
+  };
+}
+
 function SectionSortableCard({
-  item,
+  containerId,
   index,
+  item,
   totalItems,
-}: {
-  item: SortableAdminItem;
-  index: number;
-  totalItems: number;
-}) {
-  const { isPending, measureItem, moveByButton } = useSectionDragContext();
+}: SectionSortableCardProps) {
   const {
-    attributes,
-    listeners,
-    setNodeRef,
-    setActivatorNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id });
+    activeId,
+    dragHandleId,
+    isPending,
+    dropOnItem,
+    endDrag,
+    moveByButton,
+    moveOverItem,
+    setDragHandleId,
+    startDrag,
+  } = useSectionDragContext();
+  const isDragging = activeId === item.id;
+
+  const markHandle = (event: PointerEvent<HTMLButtonElement>) => {
+    if (event.pointerType === "touch") return;
+    setDragHandleId(item.id);
+  };
 
   return (
     <div
-      ref={(node) => {
-        setNodeRef(node);
-        if (node) measureItem(item.id, node.getBoundingClientRect());
+      draggable={dragHandleId === item.id}
+      onDragStart={(event) => startDrag(item.id, event)}
+      onDragOver={(event) => {
+        event.preventDefault();
+        moveOverItem(item.id);
       }}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
+      onDrop={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        dropOnItem(item.id);
       }}
+      onDragEnd={endDrag}
+      data-section-container={containerId}
     >
       <div
         className={cn(
@@ -141,12 +192,12 @@ function SectionSortableCard({
         )}
       >
         <button
-          ref={setActivatorNodeRef}
           type="button"
           className="absolute left-1/2 top-1 z-10 flex h-7 w-12 -translate-x-1/2 cursor-grab touch-manipulation items-center justify-center rounded-full border border-dashed border-[color:rgba(22,37,29,0.18)] bg-[color:rgba(255,249,234,0.94)] text-[var(--atlas-jungle)] shadow-[0_8px_18px_rgba(22,37,29,0.08)] transition hover:border-[var(--atlas-coral)] hover:bg-[color:rgba(255,249,234,1)] active:cursor-grabbing"
           aria-label={`Drag ${item.label}`}
-          {...attributes}
-          {...listeners}
+          onPointerDown={markHandle}
+          onPointerUp={() => setDragHandleId(null)}
+          onPointerCancel={() => setDragHandleId(null)}
         >
           <GripVertical className="h-4 w-4" />
         </button>
@@ -180,59 +231,46 @@ function SectionSortableCard({
   );
 }
 
-function SectionDragPreview({ item, size }: { item: SortableAdminItem; size: DragPreviewSize }) {
-  return (
-    <div
-      className="relative rounded-[1.75rem] bg-[color:rgba(255,249,234,0.96)] opacity-95 ring-2 ring-[color:rgba(242,111,76,0.36)] shadow-[0_28px_72px_rgba(22,37,29,0.28)]"
-      style={{
-        width: size?.width,
-        minHeight: size?.height,
-      }}
-    >
-      <div className="absolute left-1/2 top-1 z-10 flex h-7 w-12 -translate-x-1/2 cursor-grabbing items-center justify-center rounded-full border border-[var(--atlas-coral)] bg-[color:rgba(255,249,234,0.98)] text-[var(--atlas-jungle)] shadow-[0_8px_18px_rgba(22,37,29,0.12)]">
-        <GripVertical className="h-4 w-4" />
-      </div>
-      <div className="pointer-events-none min-w-0">{item.node}</div>
-    </div>
-  );
-}
-
 export function SectionSortableList({ parentId, empty, className }: SectionSortableListProps) {
-  const { containerItems, error, itemMap } = useSectionDragContext();
+  const { activeId, containerItems, error, itemMap, dropOnContainer } = useSectionDragContext();
   const containerId = containerIdForParent(parentId);
-  const { setNodeRef, isOver } = useDroppable({ id: containerId });
   const sectionIds = containerItems[containerId] ?? [];
 
   return (
     <div
-      ref={setNodeRef}
       className={cn(
         "space-y-4 rounded-[1.75rem] transition",
-        isOver ? "bg-[color:rgba(242,111,76,0.06)] ring-2 ring-[color:rgba(242,111,76,0.22)]" : null,
+        activeId ? "min-h-12 ring-1 ring-dashed ring-[color:rgba(22,37,29,0.12)]" : null,
         className,
       )}
+      onDragOver={(event) => {
+        event.preventDefault();
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        dropOnContainer(containerId);
+      }}
     >
       {error ? (
         <p className="rounded-2xl border border-[color:rgba(242,111,76,0.26)] bg-[color:rgba(242,111,76,0.08)] px-3 py-2 text-sm font-bold text-[var(--atlas-coral)]">
           {error}
         </p>
       ) : null}
-      <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
-        {sectionIds.length ? sectionIds.map((sectionId, index) => {
-          const item = itemMap.get(sectionId);
-          if (!item) return null;
-          return (
-            <SectionSortableCard
-              key={item.id}
-              item={item}
-              index={index}
-              totalItems={sectionIds.length}
-            />
-          );
-        }) : (
-          empty ?? null
-        )}
-      </SortableContext>
+      {sectionIds.length ? sectionIds.map((sectionId, index) => {
+        const item = itemMap.get(sectionId);
+        if (!item) return null;
+        return (
+          <SectionSortableCard
+            key={item.id}
+            containerId={containerId}
+            index={index}
+            item={item}
+            totalItems={sectionIds.length}
+          />
+        );
+      }) : (
+        empty ?? null
+      )}
     </div>
   );
 }
@@ -245,21 +283,13 @@ export function SectionDragScope({
 }: SectionDragScopeProps) {
   const [containerItems, setContainerItems] = useState(() => createInitialContainerItems(containers));
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [activeSize, setActiveSize] = useState<DragPreviewSize>(null);
+  const [dragHandleId, setDragHandleId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const latestContainerItems = useRef(containerItems);
   const dragStartContainerItems = useRef(containerItems);
-  const itemRects = useRef<Record<string, DragPreviewSize>>({});
+  const didDrop = useRef(false);
   const itemMap = new Map(items.map((item) => [item.id, item]));
-  const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: { distance: 4 },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: { delay: TOUCH_LONG_PRESS_MS, tolerance: 10 },
-    }),
-  );
 
   const persistOrder = (nextContainerItems: Record<string, string[]>) => {
     latestContainerItems.current = nextContainerItems;
@@ -285,120 +315,83 @@ export function SectionDragScope({
 
     const nextContainerItems = {
       ...containerItems,
-      [containerId]: arrayMove(currentItems, currentIndex, nextIndex),
+      [containerId]: [
+        ...currentItems.slice(0, Math.min(currentIndex, nextIndex)),
+        currentItems[Math.max(currentIndex, nextIndex)],
+        currentItems[Math.min(currentIndex, nextIndex)],
+        ...currentItems.slice(Math.max(currentIndex, nextIndex) + 1),
+      ],
     };
     setContainerItems(nextContainerItems);
     persistOrder(nextContainerItems);
   };
 
-  const measureItem = (id: string, rect: DOMRect) => {
-    const nextSize = { width: rect.width, height: rect.height };
-    const currentSize = itemRects.current[id];
-    if (currentSize?.width === nextSize.width && currentSize.height === nextSize.height) return;
-    itemRects.current[id] = nextSize;
-  };
-
-  const handleDragStart = (event: DragStartEvent) => {
-    const nextActiveId = String(event.active.id);
+  const startDrag = (id: string, event: DragEvent<HTMLDivElement>) => {
+    didDrop.current = false;
     dragStartContainerItems.current = latestContainerItems.current;
-    setActiveId(nextActiveId);
-    setActiveSize(itemRects.current[nextActiveId] ?? null);
+    setActiveId(id);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", id);
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeItemId = String(active.id);
-    const overItemId = String(over.id);
-    const activeContainerId = findContainer(latestContainerItems.current, activeItemId);
-    const overContainerId = findContainer(latestContainerItems.current, overItemId);
-    if (!activeContainerId || !overContainerId) return;
-
+  const moveOverItem = (overId: string) => {
+    if (!activeId || activeId === overId) return;
     setContainerItems((current) => {
-      const currentActiveContainerId = findContainer(current, activeItemId);
-      const currentOverContainerId = findContainer(current, overItemId);
-      if (!currentActiveContainerId || !currentOverContainerId) return current;
-
-      const activeItems = current[currentActiveContainerId] ?? [];
-      const overItems = current[currentOverContainerId] ?? [];
-      const activeIndex = activeItems.indexOf(activeItemId);
-      const overIndex = overItems.indexOf(overItemId);
-      if (activeIndex < 0) return current;
-
-      if (currentActiveContainerId === currentOverContainerId) {
-        if (overIndex < 0 || activeIndex === overIndex) return current;
-        const next = {
-          ...current,
-          [currentActiveContainerId]: arrayMove(activeItems, activeIndex, overIndex),
-        };
-        latestContainerItems.current = next;
-        return next;
-      }
-
-      const nextOverIndex = overIndex >= 0 ? overIndex : overItems.length;
-      const next = {
-        ...current,
-        [currentActiveContainerId]: activeItems.filter((id) => id !== activeItemId),
-        [currentOverContainerId]: [
-          ...overItems.slice(0, nextOverIndex),
-          activeItemId,
-          ...overItems.slice(nextOverIndex),
-        ],
-      };
+      const next = moveItemBefore(current, activeId, overId);
       latestContainerItems.current = next;
       return next;
     });
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const dropOnItem = (overId: string) => {
+    if (!activeId) return;
+    const next = moveItemBefore(latestContainerItems.current, activeId, overId);
+    didDrop.current = true;
+    setContainerItems(next);
+    persistOrder(next);
     setActiveId(null);
-    setActiveSize(null);
-    if (!event.over) {
-      latestContainerItems.current = dragStartContainerItems.current;
-      setContainerItems(dragStartContainerItems.current);
-      return;
-    }
-    persistOrder(latestContainerItems.current);
+    setDragHandleId(null);
   };
 
-  const activeItem = activeId ? itemMap.get(activeId) : null;
-  const dragOverlay = (
-    <DragOverlay
-      adjustScale={false}
-      dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}
-    >
-      {activeItem ? <SectionDragPreview item={activeItem} size={activeSize} /> : null}
-    </DragOverlay>
-  );
+  const dropOnContainer = (containerId: string) => {
+    if (!activeId) return;
+    const next = moveItemToContainerEnd(latestContainerItems.current, activeId, containerId);
+    didDrop.current = true;
+    setContainerItems(next);
+    persistOrder(next);
+    setActiveId(null);
+    setDragHandleId(null);
+  };
+
+  const endDrag = () => {
+    if (!didDrop.current && activeId) {
+      latestContainerItems.current = dragStartContainerItems.current;
+      setContainerItems(dragStartContainerItems.current);
+    }
+    setActiveId(null);
+    setDragHandleId(null);
+    didDrop.current = false;
+  };
 
   return (
     <SectionDragContext.Provider
       value={{
+        activeId,
         containerItems,
+        dragHandleId,
         error,
         isPending,
         itemMap,
-        measureItem,
+        dropOnContainer,
+        dropOnItem,
+        endDrag,
         moveByButton,
+        moveOverItem,
+        setDragHandleId,
+        startDrag,
       }}
     >
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragCancel={() => {
-          setActiveId(null);
-          setActiveSize(null);
-          latestContainerItems.current = dragStartContainerItems.current;
-          setContainerItems(dragStartContainerItems.current);
-        }}
-        onDragEnd={handleDragEnd}
-      >
-        {children}
-        {typeof document === "undefined" ? dragOverlay : createPortal(dragOverlay, document.body)}
-      </DndContext>
+      {children}
     </SectionDragContext.Provider>
   );
 }
