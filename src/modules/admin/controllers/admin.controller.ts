@@ -19,6 +19,7 @@ import {
   reorderQuestionSectionsFromInput,
   reorderQuestionsFromInput,
   reorderResponseFieldsFromInput,
+  reorderSectionParentsFromInput,
   reorderSectionsFromInput,
   saveIdentityFieldFromForm,
   saveQuestionFromForm,
@@ -187,5 +188,15 @@ export async function reorderQuestionSectionsAction(
   await requireSuperAdmin();
   const result = await reorderQuestionSectionsFromInput(templateId, sections);
   if (!result.ok) throw new Error(result.message ?? "Gagal menyimpan perpindahan pertanyaan");
+  revalidatePath("/admin/templates");
+}
+
+export async function reorderSectionParentsAction(
+  templateId: string,
+  sections: Array<{ parentId: string | null; orderedIds: string[] }>,
+) {
+  await requireSuperAdmin();
+  const result = await reorderSectionParentsFromInput(templateId, sections);
+  if (!result.ok) throw new Error(result.message ?? "Gagal menyimpan perpindahan bagian");
   revalidatePath("/admin/templates");
 }

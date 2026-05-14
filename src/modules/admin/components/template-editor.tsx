@@ -11,6 +11,7 @@ import { QuestionForm } from "@/modules/admin/components/question-form";
 import { QuestionDragScope } from "@/modules/admin/components/question-sortable-scope";
 import { ResponseFieldEditor } from "@/modules/admin/components/response-field-editor";
 import { ResponseFieldForm } from "@/modules/admin/components/response-field-form";
+import { SectionDragScope, SectionSortableList } from "@/modules/admin/components/section-sortable-scope";
 import { SectionEditor } from "@/modules/admin/components/section-editor";
 import { SectionForm } from "@/modules/admin/components/section-form";
 import { SortableAdminList } from "@/modules/admin/components/sortable-admin-list";
@@ -18,7 +19,7 @@ import {
   reorderIdentityFieldsAction,
   reorderQuestionSectionsAction,
   reorderResponseFieldsAction,
-  reorderSectionsAction,
+  reorderSectionParentsAction,
   updateTemplateSettingsAction,
 } from "@/modules/admin/controllers/admin.controller";
 import { countQuestions } from "@/modules/surveys/services/formula.service";
@@ -30,9 +31,24 @@ function flattenSections(sections: SectionWithQuestions[]): SectionWithQuestions
 export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
   const reorderIdentityAction = reorderIdentityFieldsAction.bind(null, detail.id);
   const reorderResponseAction = reorderResponseFieldsAction.bind(null, detail.id);
-  const reorderRootSectionsAction = reorderSectionsAction.bind(null, detail.id, null);
   const reorderQuestionSections = reorderQuestionSectionsAction.bind(null, detail.id);
+  const reorderSectionParents = reorderSectionParentsAction.bind(null, detail.id);
   const allSections = flattenSections(detail.sections);
+  const sectionContainers = [
+    {
+      parentId: null,
+      sectionIds: detail.sections.map((section) => section.id),
+    },
+    ...allSections.map((section) => ({
+      parentId: section.id,
+      sectionIds: section.children.map((child) => child.id),
+    })),
+  ];
+  const sectionItems = allSections.map((section) => ({
+    id: section.id,
+    label: section.title,
+    node: <SectionEditor templateId={detail.id} section={section} sections={detail.flatSections} />,
+  }));
   const questionContainers = allSections.map((section) => ({
     sectionId: section.id,
     title: section.title,
@@ -130,16 +146,14 @@ export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
         items={questionItems}
         reorderAction={reorderQuestionSections}
       >
-        <SortableAdminList
-          key={detail.sections.map((section) => `${section.id}:${section.sort_order}:${section.title}:${section.is_active}`).join("|")}
-          className="space-y-4"
-          reorderAction={reorderRootSectionsAction}
-          items={detail.sections.map((section) => ({
-            id: section.id,
-            label: section.title,
-            node: <SectionEditor templateId={detail.id} section={section} sections={detail.flatSections} />,
-          }))}
-        />
+        <SectionDragScope
+          key={sectionContainers.map((container) => `${container.parentId ?? "root"}:${container.sectionIds.join(",")}`).join("|")}
+          containers={sectionContainers}
+          items={sectionItems}
+          reorderAction={reorderSectionParents}
+        >
+          <SectionSortableList parentId={null} />
+        </SectionDragScope>
       </QuestionDragScope>
     </div>
   );

@@ -5,6 +5,7 @@ import {
   questionSectionOrdersSchema,
   responseFieldSchema,
   sectionSchema,
+  sectionParentOrdersSchema,
   templateSchema,
   templateReorderSchema,
   templateSettingsSchema,
@@ -26,6 +27,7 @@ import {
   reorderQuestionsAcrossSections,
   reorderResponseFields,
   reorderSections,
+  reorderSectionsAcrossParents,
   updateFormula,
   updateTemplateSettings,
   upsertIdentityField,
@@ -235,6 +237,16 @@ export async function reorderSectionsFromInput(templateId: string, parentId: str
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
   await reorderSections(parsed.data);
   return { ok: true, message: "Urutan bagian disimpan" };
+}
+
+export async function reorderSectionParentsFromInput(
+  templateId: string,
+  sections: Array<{ parentId: string | null; orderedIds: string[] }>,
+) {
+  const parsed = sectionParentOrdersSchema.safeParse({ templateId, sections });
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
+  await reorderSectionsAcrossParents(parsed.data);
+  return { ok: true, message: "Urutan dan induk bagian disimpan" };
 }
 
 export async function reorderQuestionsFromInput(templateId: string, sectionId: string | null, orderedIds: string[]) {

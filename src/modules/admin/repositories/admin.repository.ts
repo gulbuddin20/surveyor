@@ -6,6 +6,7 @@ import type {
   QuestionSectionOrdersInput,
   QuestionInput,
   ResponseFieldInput,
+  SectionParentOrdersInput,
   SectionInput,
   TemplateInput,
   TemplateReorderInput,
@@ -415,6 +416,78 @@ export async function reorderSections(input: TemplateReorderInput) {
       .eq("template_id", input.templateId);
     if (updateError) throw updateError;
   }));
+}
+
+function assertNoSectionCycles(
+  parentBySectionId: Map<string, string | null>,
+  nextParentBySectionId: Map<string, string | null>,
+) {
+  nextParentBySectionId.forEach((parentId, sectionId) => {
+    let cursor = parentId;
+    const seen = new Set<string>();
+
+    while (cursor) {
+      if (cursor === sectionId) {
+        throw new Error("Bagian tidak bisa dipindahkan ke dalam turunannya sendiri.");
+      }
+      if (seen.has(cursor)) {
+        throw new Error("Struktur bagian membentuk siklus.");
+      }
+      seen.add(cursor);
+      cursor = nextParentBySectionId.get(cursor) ?? parentBySectionId.get(cursor) ?? null;
+    }
+  });
+}
+
+export async function reorderSectionsAcrossParents(input: SectionParentOrdersInput) {
+  const supabase = await createSupabaseServerClient();
+  const parentKeys = input.sections.map((section) => section.parentId ?? "__root__");
+  const parentIds = input.sections.map((section) => section.parentId).filter((id): id is string => Boolean(id));
+  const orderedIds = input.sections.flatMap((section) => section.orderedIds);
+
+  if (new Set(parentKeys).size !== parentKeys.length) {
+    throw new Error("Scope induk bagian berisi duplikat.");
+  }
+  if (new Set(orderedIds).size !== orderedIds.length) {
+    throw new Error("Urutan bagian berisi item duplikat.");
+  }
+
+  const { data, error } = await supabase
+    .schema("surveyor")
+    .from("survey_sections")
+    .select("id,parent_id")
+    .eq("template_id", input.templateId);
+  if (error) throw error;
+
+  const sectionIds = (data ?? []).map((section) => section.id);
+  const sectionIdSet = new Set(sectionIds);
+  if (parentIds.some((parentId) => !sectionIdSet.has(parentId))) {
+    throw new Error("Bagian induk tujuan tidak valid.");
+  }
+
+  assertExactReorderScope(orderedIds, sectionIds);
+
+  const currentParentBySectionId = new Map((data ?? []).map((section) => [section.id, section.parent_id as string | null]));
+  const nextParentBySectionId = new Map(currentParentBySectionId);
+  input.sections.forEach((section) => {
+    section.orderedIds.forEach((id) => {
+      nextParentBySectionId.set(id, section.parentId);
+    });
+  });
+  assertNoSectionCycles(currentParentBySectionId, nextParentBySectionId);
+
+  await Promise.all(input.sections.flatMap((section) => section.orderedIds.map(async (id, index) => {
+    const { error: updateError } = await supabase
+      .schema("surveyor")
+      .from("survey_sections")
+      .update({
+        parent_id: section.parentId,
+        sort_order: sortOrderForIndex(index),
+      })
+      .eq("id", id)
+      .eq("template_id", input.templateId);
+    if (updateError) throw updateError;
+  })));
 }
 
 export async function upsertQuestion(input: QuestionInput) {
