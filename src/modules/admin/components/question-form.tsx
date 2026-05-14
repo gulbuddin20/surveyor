@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { QuestionType, SurveyQuestion, SurveySection } from "@/lib/types";
 import { saveQuestionAction } from "@/modules/admin/controllers/admin.controller";
+import { QuestionSortOrderInput } from "@/modules/admin/components/question-sort-order-input";
 
 const questionTypes: QuestionType[] = [
   "checkbox",
@@ -80,7 +81,11 @@ export function QuestionForm({
         </div>
         <div className="space-y-2">
           <Label>Urutan</Label>
-          <Input name="sortOrder" type="number" defaultValue={question?.sort_order ?? 0} />
+          {question ? (
+            <QuestionSortOrderInput questionId={question.id} initialSortOrder={question.sort_order} />
+          ) : (
+            <Input name="sortOrder" type="number" defaultValue={0} />
+          )}
         </div>
         <div className="flex items-end gap-3">
           <label className="mb-3 flex items-center gap-2 text-sm">
