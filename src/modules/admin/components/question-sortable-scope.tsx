@@ -91,6 +91,23 @@ function useQuestionDragContext() {
   return context;
 }
 
+export function useQuestionPlacement(questionId: string) {
+  const context = useContext(QuestionDragContext);
+  if (!context) return null;
+
+  for (const [sectionId, questionIds] of Object.entries(context.containerItems)) {
+    const index = questionIds.indexOf(questionId);
+    if (index >= 0) {
+      return {
+        sectionId,
+        sortOrder: (index + 1) * 10,
+      };
+    }
+  }
+
+  return null;
+}
+
 function QuestionSortableCard({
   item,
   index,
@@ -271,15 +288,20 @@ export function QuestionDragScope({
   const persistOrder = (nextContainerItems: Record<string, string[]>) => {
     latestContainerItems.current = nextContainerItems;
     setError(null);
+    toast({
+      title: "Menyimpan urutan...",
+      description: "Perubahan drag sedang dikirim ke server.",
+      variant: "default",
+    });
     startTransition(() => {
       void reorderAction(createSectionOrders(nextContainerItems))
         .then(() => {
-          router.refresh();
           toast({
             title: "Pertanyaan dipindahkan",
             description: "Urutan dan bagian pertanyaan berhasil disimpan.",
             variant: "success",
           });
+          router.refresh();
         })
         .catch((caught: unknown) => {
           const message = caught instanceof Error ? caught.message : "Gagal menyimpan perpindahan pertanyaan.";

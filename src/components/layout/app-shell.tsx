@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState, useTransition, type MouseEvent } from "react";
 import { ClipboardList, FileClock, FileText, LayoutDashboard, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Settings, Users } from "lucide-react";
 import { FiklingoLogo } from "@/components/brand/fiklingo-logo";
 import { Button } from "@/components/ui/button";
@@ -25,11 +25,36 @@ const adminNav = [
 export function AppShell({ profile, children }: { profile: Profile; children: React.ReactNode }) {
   const nav = profile.role === "super_admin" ? [...userNav, ...adminNav] : userNav;
   const pathname = usePathname();
+  const router = useRouter();
+  const [isNavigating, startNavigation] = useTransition();
+  const [targetPath, setTargetPath] = useState<string | null>(null);
 
   useEffect(() => {
     const mobileSidebar = document.getElementById("mobile-sidebar");
     if (mobileSidebar instanceof HTMLInputElement) mobileSidebar.checked = false;
   }, [pathname]);
+
+  const handleNavClick = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      pathname === href
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    setTargetPath(href);
+    startNavigation(() => {
+      router.push(href);
+    });
+  };
+
+  const showRoutePending = isNavigating || Boolean(targetPath && targetPath !== pathname);
 
   return (
     <div className="group/shell min-h-screen has-[[data-sidebar='collapsed']:checked]:md:[--sidebar-width:5.75rem] md:[--sidebar-width:18rem]">
@@ -68,10 +93,14 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch
                 className={cn(
                   "group/nav flex min-h-12 items-center gap-3 rounded-2xl px-3 text-sm font-extrabold text-[color:rgba(255,249,234,0.68)] transition hover:bg-[color:rgba(255,249,234,0.11)] hover:text-[var(--atlas-paper)] md:group-has-[[data-sidebar='collapsed']:checked]/shell:justify-center md:group-has-[[data-sidebar='collapsed']:checked]/shell:px-0",
                   active && "bg-[var(--atlas-paper)] text-[var(--atlas-jungle)] shadow-[0_16px_38px_rgba(0,0,0,0.16)]",
+                  targetPath === item.href && !active && "bg-[color:rgba(255,249,234,0.16)] text-[var(--atlas-paper)]",
                 )}
+                onClick={(event) => handleNavClick(event, item.href)}
+                onMouseEnter={() => router.prefetch(item.href)}
                 title={item.label}
               >
                 <span
@@ -113,6 +142,11 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
       </aside>
 
       <main className="min-h-screen transition-[margin] duration-300 md:ml-[var(--sidebar-width)]">
+        {showRoutePending ? (
+          <div className="fixed inset-x-0 top-0 z-[70] h-1 bg-[color:rgba(15,107,79,0.16)] md:left-[var(--sidebar-width)]">
+            <div className="h-full w-1/2 animate-pulse rounded-r-full bg-[var(--atlas-coral)]" />
+          </div>
+        ) : null}
         <header className="sticky top-0 z-30 border-b border-[color:rgba(22,37,29,0.1)] bg-[color:rgba(243,234,215,0.78)] px-4 py-3 shadow-sm shadow-black/5 backdrop-blur-xl md:px-6 lg:px-8">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
@@ -135,7 +169,14 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
             </div>
           </div>
         </header>
-        <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 md:py-8 lg:px-8">{children}</div>
+        <div
+          className={cn(
+            "mx-auto w-full max-w-7xl px-4 py-5 transition-opacity sm:px-6 md:py-8 lg:px-8",
+            showRoutePending && "opacity-60",
+          )}
+        >
+          {children}
+        </div>
       </main>
     </div>
   );
