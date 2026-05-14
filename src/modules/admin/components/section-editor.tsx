@@ -2,14 +2,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { SectionWithQuestions, SurveySection } from "@/lib/types";
-import {
-  deleteSectionAction,
-  reorderSectionsAction,
-} from "@/modules/admin/controllers/admin.controller";
+import { deleteSectionAction } from "@/modules/admin/controllers/admin.controller";
 import { QuestionForm } from "@/modules/admin/components/question-form";
 import { QuestionSortableList } from "@/modules/admin/components/question-sortable-scope";
+import { SectionSortableList } from "@/modules/admin/components/section-sortable-scope";
 import { SectionForm } from "@/modules/admin/components/section-form";
-import { SortableAdminList } from "@/modules/admin/components/sortable-admin-list";
 
 export function SectionEditor({
   templateId,
@@ -22,8 +19,6 @@ export function SectionEditor({
   sections: SurveySection[];
   depth?: number;
 }) {
-  const reorderChildSectionsAction = reorderSectionsAction.bind(null, templateId, section.id);
-
   return (
     <Card className={depth ? "bg-[color:rgba(255,249,234,0.64)]" : undefined}>
       <CardHeader>
@@ -47,25 +42,10 @@ export function SectionEditor({
         </form>
         <QuestionForm templateId={templateId} sections={sections} sectionId={section.id} />
         <QuestionSortableList sectionId={section.id} />
-        {section.children.length ? (
-          <SortableAdminList
-            key={section.children.map((child) => `${child.id}:${child.sort_order}:${child.title}:${child.is_active}`).join("|")}
-            className="space-y-4 border-l-2 border-[color:rgba(242,111,76,0.28)] pl-4"
-            reorderAction={reorderChildSectionsAction}
-            items={section.children.map((child) => ({
-              id: child.id,
-              label: child.title,
-              node: (
-                <SectionEditor
-                  templateId={templateId}
-                  section={child}
-                  sections={sections}
-                  depth={depth + 1}
-                />
-              ),
-            }))}
-          />
-        ) : null}
+        <SectionSortableList
+          parentId={section.id}
+          className="border-l-2 border-[color:rgba(242,111,76,0.28)] pl-4"
+        />
       </div>
     </Card>
   );

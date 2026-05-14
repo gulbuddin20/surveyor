@@ -28,38 +28,27 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { SortableAdminItem } from "@/modules/admin/components/sortable-admin-list";
 
-type QuestionContainer = {
-  sectionId: string;
-  title: string;
-  questionIds: string[];
+type SectionContainer = {
+  parentId: string | null;
+  sectionIds: string[];
 };
 
-type QuestionSectionOrder = {
-  sectionId: string;
+type SectionParentOrder = {
+  parentId: string | null;
   orderedIds: string[];
 };
 
-type QuestionDragScopeProps = {
+type SectionDragScopeProps = {
   children: ReactNode;
-  containers: QuestionContainer[];
+  containers: SectionContainer[];
   items: SortableAdminItem[];
-  reorderAction: (sections: QuestionSectionOrder[]) => Promise<void>;
+  reorderAction: (sections: SectionParentOrder[]) => Promise<void>;
 };
 
-type QuestionSortableListProps = {
-  sectionId: string;
+type SectionSortableListProps = {
+  parentId: string | null;
   empty?: ReactNode;
-};
-
-type QuestionDragContextValue = {
-  activeId: string | null;
-  activeSize: DragPreviewSize;
-  containerItems: Record<string, string[]>;
-  error: string | null;
-  isPending: boolean;
-  itemMap: Map<string, SortableAdminItem>;
-  moveByButton: (id: string, direction: -1 | 1) => void;
-  measureItem: (id: string, rect: DOMRect) => void;
+  className?: string;
 };
 
 type DragPreviewSize = {
@@ -67,11 +56,31 @@ type DragPreviewSize = {
   height: number;
 } | null;
 
-const TOUCH_LONG_PRESS_MS = 2000;
-const QuestionDragContext = createContext<QuestionDragContextValue | null>(null);
+type SectionDragContextValue = {
+  containerItems: Record<string, string[]>;
+  error: string | null;
+  isPending: boolean;
+  itemMap: Map<string, SortableAdminItem>;
+  measureItem: (id: string, rect: DOMRect) => void;
+  moveByButton: (id: string, direction: -1 | 1) => void;
+};
 
-function createInitialContainerItems(containers: QuestionContainer[]) {
-  return Object.fromEntries(containers.map((container) => [container.sectionId, container.questionIds]));
+const ROOT_CONTAINER_ID = "__root_sections__";
+const TOUCH_LONG_PRESS_MS = 2000;
+const SectionDragContext = createContext<SectionDragContextValue | null>(null);
+
+function containerIdForParent(parentId: string | null) {
+  return parentId ?? ROOT_CONTAINER_ID;
+}
+
+function parentIdForContainer(containerId: string) {
+  return containerId === ROOT_CONTAINER_ID ? null : containerId;
+}
+
+function createInitialContainerItems(containers: SectionContainer[]) {
+  return Object.fromEntries(
+    containers.map((container) => [containerIdForParent(container.parentId), container.sectionIds]),
+  );
 }
 
 function findContainer(containerItems: Record<string, string[]>, id: string) {
@@ -79,17 +88,20 @@ function findContainer(containerItems: Record<string, string[]>, id: string) {
   return Object.keys(containerItems).find((containerId) => containerItems[containerId]?.includes(id)) ?? null;
 }
 
-function createSectionOrders(containerItems: Record<string, string[]>): QuestionSectionOrder[] {
-  return Object.entries(containerItems).map(([sectionId, orderedIds]) => ({ sectionId, orderedIds }));
+function createSectionOrders(containerItems: Record<string, string[]>): SectionParentOrder[] {
+  return Object.entries(containerItems).map(([containerId, orderedIds]) => ({
+    parentId: parentIdForContainer(containerId),
+    orderedIds,
+  }));
 }
 
-function useQuestionDragContext() {
-  const context = useContext(QuestionDragContext);
-  if (!context) throw new Error("QuestionSortableList must be used inside QuestionDragScope");
+function useSectionDragContext() {
+  const context = useContext(SectionDragContext);
+  if (!context) throw new Error("SectionSortableList must be used inside SectionDragScope");
   return context;
 }
 
-function QuestionSortableCard({
+function SectionSortableCard({
   item,
   index,
   totalItems,
@@ -98,7 +110,7 @@ function QuestionSortableCard({
   index: number;
   totalItems: number;
 }) {
-  const { isPending, moveByButton, measureItem } = useQuestionDragContext();
+  const { isPending, measureItem, moveByButton } = useSectionDragContext();
   const {
     attributes,
     listeners,
@@ -162,15 +174,13 @@ function QuestionSortableCard({
             <ArrowDown className="h-4 w-4" />
           </Button>
         </div>
-        <div className="min-w-0">
-          {item.node}
-        </div>
+        <div className="min-w-0">{item.node}</div>
       </div>
     </div>
   );
 }
 
-function QuestionDragPreview({ item, size }: { item: SortableAdminItem; size: DragPreviewSize }) {
+function SectionDragPreview({ item, size }: { item: SortableAdminItem; size: DragPreviewSize }) {
   return (
     <div
       className="relative rounded-[1.75rem] bg-[color:rgba(255,249,234,0.96)] opacity-95 ring-2 ring-[color:rgba(242,111,76,0.36)] shadow-[0_28px_72px_rgba(22,37,29,0.28)]"
@@ -187,48 +197,52 @@ function QuestionDragPreview({ item, size }: { item: SortableAdminItem; size: Dr
   );
 }
 
-export function QuestionSortableList({ sectionId, empty }: QuestionSortableListProps) {
-  const { containerItems, itemMap, error } = useQuestionDragContext();
-  const { setNodeRef, isOver } = useDroppable({ id: sectionId });
-  const questionIds = containerItems[sectionId] ?? [];
+export function SectionSortableList({ parentId, empty, className }: SectionSortableListProps) {
+  const { containerItems, error, itemMap } = useSectionDragContext();
+  const containerId = containerIdForParent(parentId);
+  const { setNodeRef, isOver } = useDroppable({ id: containerId });
+  const sectionIds = containerItems[containerId] ?? [];
 
   return (
-    <div ref={setNodeRef} className={cn("space-y-3 rounded-[1.75rem] transition", isOver ? "bg-[color:rgba(242,111,76,0.06)] ring-2 ring-[color:rgba(242,111,76,0.22)]" : null)}>
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "space-y-4 rounded-[1.75rem] transition",
+        isOver ? "bg-[color:rgba(242,111,76,0.06)] ring-2 ring-[color:rgba(242,111,76,0.22)]" : null,
+        className,
+      )}
+    >
       {error ? (
         <p className="rounded-2xl border border-[color:rgba(242,111,76,0.26)] bg-[color:rgba(242,111,76,0.08)] px-3 py-2 text-sm font-bold text-[var(--atlas-coral)]">
           {error}
         </p>
       ) : null}
-      <SortableContext items={questionIds} strategy={verticalListSortingStrategy}>
-        {questionIds.length ? questionIds.map((questionId, index) => {
-          const item = itemMap.get(questionId);
+      <SortableContext items={sectionIds} strategy={verticalListSortingStrategy}>
+        {sectionIds.length ? sectionIds.map((sectionId, index) => {
+          const item = itemMap.get(sectionId);
           if (!item) return null;
           return (
-            <QuestionSortableCard
+            <SectionSortableCard
               key={item.id}
               item={item}
               index={index}
-              totalItems={questionIds.length}
+              totalItems={sectionIds.length}
             />
           );
         }) : (
-          empty ?? (
-            <p className="rounded-2xl border border-dashed border-[color:rgba(22,37,29,0.16)] px-4 py-5 text-sm text-[color:rgba(22,37,29,0.58)]">
-              Belum ada pertanyaan. Drag pertanyaan ke bagian ini atau tambah pertanyaan baru.
-            </p>
-          )
+          empty ?? null
         )}
       </SortableContext>
     </div>
   );
 }
 
-export function QuestionDragScope({
+export function SectionDragScope({
   children,
   containers,
   items,
   reorderAction,
-}: QuestionDragScopeProps) {
+}: SectionDragScopeProps) {
   const [containerItems, setContainerItems] = useState(() => createInitialContainerItems(containers));
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeSize, setActiveSize] = useState<DragPreviewSize>(null);
@@ -255,7 +269,7 @@ export function QuestionDragScope({
         const resetItems = createInitialContainerItems(containers);
         latestContainerItems.current = resetItems;
         setContainerItems(resetItems);
-        setError(caught instanceof Error ? caught.message : "Gagal menyimpan perpindahan pertanyaan.");
+        setError(caught instanceof Error ? caught.message : "Gagal menyimpan perpindahan bagian.");
       });
     });
   };
@@ -354,21 +368,19 @@ export function QuestionDragScope({
       adjustScale={false}
       dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}
     >
-      {activeItem ? <QuestionDragPreview item={activeItem} size={activeSize} /> : null}
+      {activeItem ? <SectionDragPreview item={activeItem} size={activeSize} /> : null}
     </DragOverlay>
   );
 
   return (
-    <QuestionDragContext.Provider
+    <SectionDragContext.Provider
       value={{
-        activeId,
-        activeSize,
         containerItems,
         error,
         isPending,
         itemMap,
-        moveByButton,
         measureItem,
+        moveByButton,
       }}
     >
       <DndContext
@@ -387,6 +399,6 @@ export function QuestionDragScope({
         {children}
         {typeof document === "undefined" ? dragOverlay : createPortal(dragOverlay, document.body)}
       </DndContext>
-    </QuestionDragContext.Provider>
+    </SectionDragContext.Provider>
   );
 }

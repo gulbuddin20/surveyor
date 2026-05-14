@@ -109,39 +109,31 @@ function SortableCard({
         >
           <GripVertical className="h-4 w-4" />
         </button>
-        <div className="grid gap-3 md:grid-cols-[auto_1fr]">
-          <div className="flex items-center gap-2 md:flex-col md:justify-start">
-            <div
-              aria-hidden="true"
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl border border-[color:rgba(22,37,29,0.16)] bg-[color:rgba(255,249,234,0.82)] text-[var(--atlas-jungle)] shadow-[0_10px_24px_rgba(22,37,29,0.08)]"
-            >
-              <GripVertical className="h-5 w-5" />
-            </div>
-            <div className="flex gap-1 md:flex-col">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="min-h-9 rounded-xl px-2"
-                aria-label={`Naikkan ${item.label}`}
-                disabled={index === 0 || isPending}
-                onClick={() => onMove(item.id, -1)}
-              >
-                <ArrowUp className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="min-h-9 rounded-xl px-2"
-                aria-label={`Turunkan ${item.label}`}
-                disabled={index === totalItems - 1 || isPending}
-                onClick={() => onMove(item.id, 1)}
-              >
-                <ArrowDown className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+        <div className="absolute left-2 top-12 z-10 flex flex-col gap-1 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="min-h-8 rounded-xl border border-[color:rgba(22,37,29,0.12)] bg-[color:rgba(255,249,234,0.92)] px-2 shadow-[0_8px_16px_rgba(22,37,29,0.08)]"
+            aria-label={`Naikkan ${item.label}`}
+            disabled={index === 0 || isPending}
+            onClick={() => onMove(item.id, -1)}
+          >
+            <ArrowUp className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="min-h-8 rounded-xl border border-[color:rgba(22,37,29,0.12)] bg-[color:rgba(255,249,234,0.92)] px-2 shadow-[0_8px_16px_rgba(22,37,29,0.08)]"
+            aria-label={`Turunkan ${item.label}`}
+            disabled={index === totalItems - 1 || isPending}
+            onClick={() => onMove(item.id, 1)}
+          >
+            <ArrowDown className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="min-w-0">
           {item.node}
         </div>
       </div>
@@ -172,17 +164,7 @@ function DragPreview({
       <div className="absolute left-1/2 top-1 z-10 flex h-7 w-12 -translate-x-1/2 cursor-grabbing items-center justify-center rounded-full border border-[var(--atlas-coral)] bg-[color:rgba(255,249,234,0.98)] text-[var(--atlas-jungle)] shadow-[0_8px_18px_rgba(22,37,29,0.12)]">
         <GripVertical className="h-4 w-4" />
       </div>
-      <div className="grid gap-3 md:grid-cols-[auto_1fr]">
-        <div className="flex items-center gap-2 md:flex-col md:justify-start">
-          <div
-            aria-hidden="true"
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl border border-[var(--atlas-coral)] bg-[color:rgba(255,249,234,0.92)] text-[var(--atlas-jungle)] shadow-[0_10px_24px_rgba(22,37,29,0.12)]"
-          >
-            <GripVertical className="h-5 w-5" />
-          </div>
-        </div>
-        <div className="pointer-events-none">{item.node}</div>
-      </div>
+      <div className="pointer-events-none min-w-0">{item.node}</div>
     </div>
   );
 }
