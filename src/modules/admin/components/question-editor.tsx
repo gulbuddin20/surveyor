@@ -32,6 +32,10 @@ export function QuestionEditor({
       <ActionForm
         action={deleteQuestionAction}
         className="mt-3"
+        confirmActionLabel="Ya, hapus pertanyaan"
+        confirmDescription="Pertanyaan ini akan dihapus. Jika sudah dipakai oleh hasil survei, sistem akan menonaktifkannya agar data lama tetap aman."
+        confirmTitle="Hapus pertanyaan?"
+        confirmVariant="destructive"
         successMessage="Pertanyaan dihapus."
         errorMessage="Pertanyaan gagal dihapus"
       >

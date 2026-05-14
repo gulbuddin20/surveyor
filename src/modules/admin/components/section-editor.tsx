@@ -30,6 +30,10 @@ export function SectionEditor({
       <SectionForm templateId={templateId} section={section} sections={sections} />
       <ActionForm
         action={deleteSectionAction}
+        confirmActionLabel="Ya, hapus bagian"
+        confirmDescription={`Bagian "${section.title}" akan dihapus dari template.`}
+        confirmTitle="Hapus bagian?"
+        confirmVariant="destructive"
         successMessage="Bagian dihapus."
         errorMessage="Bagian gagal dihapus"
       >

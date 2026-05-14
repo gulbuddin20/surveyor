@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type SubmitButtonProps = ButtonProps & {
+export type SubmitButtonProps = ButtonProps & {
   pendingLabel?: string;
 };
 
@@ -14,6 +14,7 @@ export function SubmitButton({
   className,
   disabled,
   pendingLabel = "Menyimpan...",
+  type = "submit",
   ...props
 }: SubmitButtonProps) {
   const { pending } = useFormStatus();
@@ -21,7 +22,7 @@ export function SubmitButton({
   return (
     <Button
       {...props}
-      type="submit"
+      type={type}
       disabled={disabled || pending}
       className={cn("relative", className)}
     >

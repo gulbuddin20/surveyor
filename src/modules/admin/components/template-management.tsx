@@ -107,6 +107,10 @@ function TemplateLink({ template, active }: { template: SurveyTemplate; active: 
       <ActionForm
         action={deleteTemplateInlineAction}
         className="mt-3"
+        confirmActionLabel="Ya, hapus template"
+        confirmDescription={`Template "${template.name}" akan dihapus. Pastikan template ini tidak masih digunakan.`}
+        confirmTitle="Hapus template?"
+        confirmVariant="destructive"
         successMessage="Template berhasil dihapus"
         errorMessage="Template gagal dihapus"
       >
