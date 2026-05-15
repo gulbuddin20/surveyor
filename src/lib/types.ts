@@ -11,7 +11,7 @@ export type QuestionType =
   | "checkbox"
   | "photo";
 export type IdentityFieldType = "text" | "textarea" | "number" | "date" | "time" | "select";
-export type TemplateResponseFieldType = IdentityFieldType | "photo";
+export type TemplateResponseFieldType = IdentityFieldType | "photo" | "signature";
 
 export type Profile = {
   id: string;

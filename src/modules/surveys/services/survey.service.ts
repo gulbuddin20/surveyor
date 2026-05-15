@@ -16,6 +16,8 @@ import {
 } from "@/modules/surveys/repositories/survey.repository";
 import { calculateSurveyScore } from "@/modules/surveys/services/formula.service";
 
+const maxSignatureDataUrlBytes = 250000;
+
 export async function getSurveyStartData() {
   return { templates: await listActiveTemplates() };
 }
@@ -94,10 +96,30 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
     }
   }
 
+  const normalizedResponseValues: Record<string, unknown> = { ...parsed.data.responseValues };
+
   for (const field of template.responseFields) {
-    if (field.field_type !== "photo" && field.is_required && !parsed.data.responseValues[field.field_key]?.trim()) {
+    if (
+      field.field_type !== "photo"
+      && field.field_type !== "signature"
+      && field.is_required
+      && !parsed.data.responseValues[field.field_key]?.trim()
+    ) {
       return { ok: false, message: `${field.label} wajib diisi` };
     }
+  }
+
+  for (const field of template.responseFields.filter((item) => item.field_type === "signature")) {
+    const rawValue = parsed.data.responseValues[field.field_key]?.trim() ?? "";
+    if (!rawValue) {
+      delete normalizedResponseValues[field.field_key];
+      if (field.is_required) return { ok: false, message: `${field.label} wajib ditandatangani` };
+      continue;
+    }
+
+    const signature = parseSignaturePayload(rawValue);
+    if (!signature) return { ok: false, message: `${field.label} tidak valid` };
+    normalizedResponseValues[field.field_key] = signature;
   }
 
   const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -154,9 +176,9 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
     total_nonconformity: score.totalNonconformity,
     score: score.score,
     result_label: score.resultLabel,
-    notes: parsed.data.responseValues.notes ?? null,
-    recommendation_notes: parsed.data.responseValues.recommendation_notes ?? null,
-    response_values: parsed.data.responseValues,
+    notes: getTextResponseValue(normalizedResponseValues.notes),
+    recommendation_notes: getTextResponseValue(normalizedResponseValues.recommendation_notes),
+    response_values: normalizedResponseValues,
     submitted_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   } as const;
@@ -218,4 +240,28 @@ function flattenQuestions(sections: SectionWithQuestions[]): SurveyQuestion[] {
     ...section.questions,
     ...flattenQuestions(section.children),
   ]);
+}
+
+function parseSignaturePayload(value: string): { dataUrl: string; signedAt: string } | null {
+  if (value.length > maxSignatureDataUrlBytes) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const dataUrl = "dataUrl" in parsed ? parsed.dataUrl : null;
+  const signedAt = "signedAt" in parsed ? parsed.signedAt : null;
+  if (typeof dataUrl !== "string") return null;
+  if (!dataUrl.startsWith("data:image/png;base64,")) return null;
+  if (dataUrl.length > maxSignatureDataUrlBytes) return null;
+  return {
+    dataUrl,
+    signedAt: typeof signedAt === "string" ? signedAt : new Date().toISOString(),
+  };
+}
+
+function getTextResponseValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value : null;
 }

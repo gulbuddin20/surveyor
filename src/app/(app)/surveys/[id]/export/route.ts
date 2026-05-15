@@ -7,6 +7,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatDate, formatNumber } from "@/lib/utils";
 
 const maxEmbeddedPhotoBytes = 8 * 1024 * 1024;
+type SignatureValue = { dataUrl: string; signedAt?: string };
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -65,7 +66,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   });
 
   y += 8;
-  const responseFields = detail.responseFields.filter((field) => field.field_type !== "photo");
+  const responseFields = detail.responseFields.filter((field) => !["photo", "signature"].includes(field.field_type));
   if (responseFields.length) {
     y = sectionTitle(pdf, "Field Tambahan", y);
     for (const field of responseFields) {
@@ -86,13 +87,21 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     }
   }
 
-  y = ensureSpace(pdf, y + 28, 90);
-  pdf.setFont("helvetica", "normal");
-  pdf.text("TTD Petugas Pemeriksa", margin, y);
-  pdf.text("Tanda Tangan Pengelola/Pemilik TPP", pageWidth - margin, y, { align: "right" });
-  y += 64;
-  pdf.line(margin, y, margin + 160, y);
-  pdf.line(pageWidth - margin - 160, y, pageWidth - margin, y);
+  const signatureFields = detail.responseFields
+    .filter((field) => field.field_type === "signature")
+    .map((field) => ({
+      field,
+      signature: parseSignatureValue(detail.response.response_values?.[field.field_key]),
+    }))
+    .filter((item): item is { field: typeof item.field; signature: SignatureValue } => Boolean(item.signature));
+
+  if (signatureFields.length) {
+    y += 8;
+    y = sectionTitle(pdf, "Tanda Tangan", y);
+    for (const item of signatureFields) {
+      y = writeSignatureField(pdf, item.field.label, item.signature, y);
+    }
+  }
 
   const bytes = Buffer.from(pdf.output("arraybuffer"));
   return new NextResponse(bytes, {
@@ -176,6 +185,52 @@ async function writePhotoEvidence(pdf: jsPDF, photo: SurveyPhoto, index: number,
   pdf.text(captionLines, metaX, y + 10);
   const captionBottom = y + 10 + captionHeight;
   return Math.max(imageBottom, captionBottom) + 18;
+}
+
+function writeSignatureField(pdf: jsPDF, label: string, signature: SignatureValue, y: number) {
+  const margin = 40;
+  const imageWidth = 180;
+  const imageHeight = 76;
+  y = ensureSpace(pdf, y, imageHeight + 44);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(9);
+  pdf.text(label, margin, y);
+  y += 10;
+  try {
+    pdf.addImage(signature.dataUrl, "PNG", margin, y, imageWidth, imageHeight, undefined, "FAST");
+  } catch {
+    pdf.rect(margin, y, imageWidth, imageHeight);
+    pdf.text("Tanda tangan tidak dapat dimuat.", margin + 10, y + 18);
+  }
+  y += imageHeight + 8;
+  pdf.line(margin, y, margin + imageWidth, y);
+  if (signature.signedAt) {
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    pdf.text(`Ditandatangani: ${formatDate(signature.signedAt)}`, margin, y + 12);
+    return y + 24;
+  }
+  return y + 14;
+}
+
+function parseSignatureValue(value: unknown): SignatureValue | null {
+  const parsed = typeof value === "string" ? safeParseJson(value) : value;
+  if (!parsed || typeof parsed !== "object") return null;
+  const dataUrl = "dataUrl" in parsed ? parsed.dataUrl : null;
+  const signedAt = "signedAt" in parsed ? parsed.signedAt : null;
+  if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/png;base64,")) return null;
+  return {
+    dataUrl,
+    signedAt: typeof signedAt === "string" ? signedAt : undefined,
+  };
+}
+
+function safeParseJson(value: string) {
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return null;
+  }
 }
 
 async function getPhotoImageData(photo: SurveyPhoto): Promise<{ dataUrl: string; format: "JPEG" | "PNG" | "WEBP" } | null> {

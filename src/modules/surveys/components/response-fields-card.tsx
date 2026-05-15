@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { TemplateResponseField } from "@/lib/types";
+import { SignatureField } from "@/modules/surveys/components/signature-field";
 
 export function ResponseFieldsCard({
   fields,
@@ -56,6 +57,19 @@ function ResponseFieldControl({ field, value }: { field: TemplateResponseField; 
           />
         </label>
       </div>
+    );
+  }
+
+  if (field.field_type === "signature") {
+    return (
+      <SignatureField
+        id={id}
+        name={name}
+        label={field.label}
+        placeholder={field.placeholder}
+        required={field.is_required}
+        value={value}
+      />
     );
   }
 

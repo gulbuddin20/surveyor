@@ -10,7 +10,8 @@ export default async function SurveyResultPage({ params }: { params: Promise<{ i
   const { detail } = await loadSurveyResultController(id);
   const identityValues = detail.subject.metadata;
   const responseValues = detail.response.response_values ?? {};
-  const nonPhotoResponseFields = detail.responseFields.filter((field) => field.field_type !== "photo");
+  const textResponseFields = detail.responseFields.filter((field) => !["photo", "signature"].includes(field.field_type));
+  const signatureFields = detail.responseFields.filter((field) => field.field_type === "signature");
   const photoFieldLabels = new Map(detail.responseFields.map((field) => [field.field_key, field.label]));
   return (
     <div className="atlas-reveal mx-auto max-w-5xl space-y-5">
@@ -57,10 +58,17 @@ export default async function SurveyResultPage({ params }: { params: Promise<{ i
             );
           })}
         </dl>
-        {nonPhotoResponseFields.length ? (
+        {textResponseFields.length ? (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {nonPhotoResponseFields.map((field) => (
+            {textResponseFields.map((field) => (
               <NoteBlock key={field.id} title={field.label} value={String(responseValues[field.field_key] || "")} />
+            ))}
+          </div>
+        ) : null}
+        {signatureFields.length ? (
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {signatureFields.map((field) => (
+              <SignatureBlock key={field.id} title={field.label} value={responseValues[field.field_key]} />
             ))}
           </div>
         ) : null}
@@ -103,4 +111,44 @@ function NoteBlock({ title, value }: { title: string; value: string | null }) {
       <p className="mt-2 whitespace-pre-wrap text-sm text-[color:rgba(22,37,29,0.62)]">{value || "-"}</p>
     </div>
   );
+}
+
+function SignatureBlock({ title, value }: { title: string; value: unknown }) {
+  const signature = parseSignatureValue(value);
+  return (
+    <div className="rounded-2xl bg-[color:rgba(255,249,234,0.52)] p-4">
+      <p className="text-sm font-extrabold text-[var(--atlas-ink)]">{title}</p>
+      {signature ? (
+        <div className="mt-3 rounded-2xl border border-[color:rgba(22,37,29,0.1)] bg-white/50 p-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={signature.dataUrl} alt={title} className="h-24 max-w-full object-contain" />
+          {signature.signedAt ? (
+            <p className="mt-2 text-xs text-[color:rgba(22,37,29,0.5)]">Ditandatangani {formatDate(signature.signedAt)}</p>
+          ) : null}
+        </div>
+      ) : (
+        <p className="mt-2 text-sm text-[color:rgba(22,37,29,0.62)]">Belum ditandatangani.</p>
+      )}
+    </div>
+  );
+}
+
+function parseSignatureValue(value: unknown): { dataUrl: string; signedAt?: string } | null {
+  const parsed = typeof value === "string" ? safeParseJson(value) : value;
+  if (!parsed || typeof parsed !== "object") return null;
+  const dataUrl = "dataUrl" in parsed ? parsed.dataUrl : null;
+  const signedAt = "signedAt" in parsed ? parsed.signedAt : null;
+  if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/png;base64,")) return null;
+  return {
+    dataUrl,
+    signedAt: typeof signedAt === "string" ? signedAt : undefined,
+  };
+}
+
+function safeParseJson(value: string) {
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return null;
+  }
 }

@@ -43,6 +43,7 @@ export function ResponseFieldForm({
           <option value="time">time</option>
           <option value="select">select</option>
           <option value="photo">photo</option>
+          <option value="signature">signature</option>
         </select>
       </div>
       <div className="space-y-2 lg:col-span-3">

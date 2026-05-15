@@ -49,7 +49,7 @@ export const responseFieldSchema = z.object({
     .max(80)
     .regex(/^[a-z0-9_]+$/, "Kunci field hanya boleh huruf kecil, angka, dan underscore"),
   label: z.string().min(2).max(160),
-  fieldType: z.enum(["text", "textarea", "number", "date", "time", "select", "photo"]),
+  fieldType: z.enum(["text", "textarea", "number", "date", "time", "select", "photo", "signature"]),
   placeholder: z.string().max(160).optional(),
   optionsText: z.string().max(1000).optional(),
   maxSizeMb: z.coerce.number().int().min(1).max(25).optional(),
@@ -133,7 +133,7 @@ export const surveySubmissionSchema = z.object({
   address: z.string().max(500).optional(),
   phone: z.string().max(40).optional(),
   identityValues: z.record(z.string(), z.string().max(1000)).default({}),
-  responseValues: z.record(z.string(), z.string().max(2000)).default({}),
+  responseValues: z.record(z.string(), z.string().max(250000)).default({}),
   nonconformities: z.array(z.uuid()).default([]),
 });
 
