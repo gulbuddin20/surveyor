@@ -35,13 +35,15 @@ export async function uploadEvidenceFile({
   category,
   path,
   file,
+  mimeType: forcedMimeType,
 }: {
   category: "photos" | "signatures";
   path: string;
   file: File | Blob | Buffer;
+  mimeType?: string;
 }): Promise<StoredFile> {
   const buffer = Buffer.from(await toArrayBuffer(file));
-  const mimeType = getMimeType(file);
+  const mimeType = forcedMimeType ?? getMimeType(file);
 
   if (isMetadataApiConfigured()) {
     return uploadToMetadataApi({ category, file, path, mimeType, buffer });

@@ -18,6 +18,9 @@ import {
 import { calculateSurveyScore } from "@/modules/surveys/services/formula.service";
 
 const maxSignatureDataUrlBytes = 250000;
+const maxPhotoFilesPerField = 3;
+const singlePhotoTargetBytes = 1024 * 1024;
+const multiPhotoTargetBytes = 500 * 1024;
 type PendingSignature = {
   fieldKey: string;
   dataUrl: string;
@@ -152,6 +155,9 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
     });
 
   for (const input of photoInputs) {
+    if (input.files.length > maxPhotoFilesPerField) {
+      return { ok: false, message: `${input.field.label} maksimal ${maxPhotoFilesPerField} foto` };
+    }
     if (input.field.is_required && !responseId && input.files.length === 0) {
       return { ok: false, message: `${input.field.label} wajib diunggah` };
     }
@@ -235,16 +241,31 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
   }
 
   const photoRows = await Promise.all(
-    photoInputs.flatMap((input) => input.files.map((file) => ({ file, fieldKey: input.field.field_key }))).map(async ({ file, fieldKey }) => ({
-      response_id: finalResponseId,
-      question_id: null,
-      field_key: fieldKey,
-      storage_path: await uploadEvidencePhoto({ userId: profile.id, responseId: finalResponseId, file }),
-      file_name: file.name,
-      mime_type: file.type,
-      file_size_bytes: file.size,
-      caption: null,
-    })),
+    photoInputs.flatMap((input) => {
+      const maxOutputBytes = input.files.length === 1 ? singlePhotoTargetBytes : multiPhotoTargetBytes;
+      return input.files.map((file) => ({
+        file,
+        fieldKey: input.field.field_key,
+        maxOutputBytes,
+      }));
+    }).map(async ({ file, fieldKey, maxOutputBytes }) => {
+      const stored = await uploadEvidencePhoto({
+        userId: profile.id,
+        responseId: finalResponseId,
+        file,
+        maxOutputBytes,
+      });
+      return {
+        response_id: finalResponseId,
+        question_id: null,
+        field_key: fieldKey,
+        storage_path: stored.storagePath,
+        file_name: file.name,
+        mime_type: stored.mimeType,
+        file_size_bytes: stored.fileSizeBytes,
+        caption: null,
+      };
+    }),
   );
   await createPhotos(photoRows);
 

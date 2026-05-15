@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import sharp from "sharp";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { uploadEvidenceFile } from "@/modules/surveys/repositories/evidence-storage";
 import type {
@@ -229,15 +230,18 @@ export async function uploadEvidencePhoto({
   userId,
   responseId,
   file,
+  maxOutputBytes,
 }: {
   userId: string;
   responseId: string;
   file: File;
+  maxOutputBytes: number;
 }) {
-  const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-120) || "evidence";
-  const path = `${userId}/${responseId}/${randomUUID()}-${cleanName}`;
-  const stored = await uploadEvidenceFile({ category: "photos", path, file });
-  return stored.storagePath;
+  const originalName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-120) || "evidence";
+  const cleanName = originalName.replace(/\.[^.]+$/, "") || "evidence";
+  const compressed = await compressEvidencePhoto(file, maxOutputBytes);
+  const path = `${userId}/${responseId}/${randomUUID()}-${cleanName}.jpg`;
+  return uploadEvidenceFile({ category: "photos", path, file: compressed, mimeType: "image/jpeg" });
 }
 
 export async function uploadSignatureImage({
@@ -257,7 +261,7 @@ export async function uploadSignatureImage({
   const buffer = Buffer.from(match[1], "base64");
   const safeFieldKey = fieldKey.replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 80) || "signature";
   const path = `${userId}/${responseId}/signatures/${safeFieldKey}-${randomUUID()}.png`;
-  const stored = await uploadEvidenceFile({ category: "signatures", path, file: buffer });
+  const stored = await uploadEvidenceFile({ category: "signatures", path, file: buffer, mimeType: "image/png" });
 
   return {
     storagePath: stored.storagePath,
@@ -278,6 +282,32 @@ export async function createPhotos(inputs: Array<Omit<SurveyPhoto, "id" | "creat
     .select("*");
   if (error) throw error;
   return (data ?? []) as SurveyPhoto[];
+}
+
+async function compressEvidencePhoto(file: File, maxOutputBytes: number) {
+  const input = Buffer.from(await file.arrayBuffer());
+  let quality = 82;
+  let width: number | undefined;
+  const metadata = await sharp(input).metadata();
+  if (metadata.width && metadata.width > 1800) width = 1800;
+
+  for (let attempt = 0; attempt < 7; attempt += 1) {
+    const output = await sharp(input)
+      .rotate()
+      .resize({ width, withoutEnlargement: true })
+      .jpeg({ quality, mozjpeg: true })
+      .toBuffer();
+
+    if (output.length <= maxOutputBytes || quality <= 46) return output;
+    quality -= 8;
+    if (attempt >= 3 && width) width = Math.max(900, Math.floor(width * 0.86));
+  }
+
+  return sharp(input)
+    .rotate()
+    .resize({ width: 900, withoutEnlargement: true })
+    .jpeg({ quality: 44, mozjpeg: true })
+    .toBuffer();
 }
 
 export async function getSurveyResultDetail(responseId: string, userId: string, isAdmin: boolean): Promise<SurveyResultDetail | null> {
