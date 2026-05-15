@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireProfile } from "@/modules/auth/services/auth.service";
 import {
@@ -40,5 +41,11 @@ export async function submitSurveyAction(formData: FormData) {
   const profile = await requireProfile();
   const result = await submitSurvey(profile, formData);
   if (!result.ok) throw new Error(result.message ?? "Gagal menyimpan survei");
-  if (result.responseId) redirect(`/surveys/${result.responseId}`);
+  if (result.responseId) {
+    revalidatePath("/surveys/history");
+    revalidatePath("/dashboard");
+    revalidatePath(`/surveys/${result.responseId}`);
+    revalidatePath(`/surveys/${result.responseId}/edit`);
+    redirect(`/surveys/${result.responseId}`);
+  }
 }

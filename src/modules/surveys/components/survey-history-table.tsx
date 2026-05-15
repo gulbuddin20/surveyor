@@ -1,5 +1,10 @@
+"use client";
+
 import Link from "next/link";
-import { Download, Eye, FilePenLine } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState, useTransition } from "react";
+import type { MouseEvent } from "react";
+import { Download, Eye, FilePenLine, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,8 +15,43 @@ import type { SurveyHistoryPage } from "@/lib/types";
 const limitOptions = [10, 20, 50];
 
 export function SurveyHistoryTable({ history }: { history: SurveyHistoryPage }) {
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentPath = searchParams.size ? `${pathname}?${searchParams.toString()}` : pathname;
+  const showPending = isPending || Boolean(pendingHref && pendingHref !== currentPath);
+
+  function navigate(event: MouseEvent<HTMLAnchorElement>, href: string) {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+    event.preventDefault();
+    setPendingHref(href);
+    startTransition(() => {
+      router.push(href);
+    });
+  }
+
   return (
-    <Card className="overflow-hidden">
+    <Card className="relative overflow-hidden">
+      {showPending ? (
+        <div className="absolute inset-0 z-20 grid place-items-center bg-[color:rgba(255,249,234,0.72)] backdrop-blur-sm">
+          <div className="rounded-[1.5rem] border border-[color:rgba(22,37,29,0.12)] bg-[var(--atlas-paper)] px-5 py-4 text-center shadow-xl shadow-black/10">
+            <Loader2 className="mx-auto h-6 w-6 animate-spin text-[var(--atlas-canopy)]" />
+            <p className="mt-2 text-sm font-extrabold text-[var(--atlas-ink)]">Memuat halaman survei...</p>
+            <p className="mt-1 text-xs font-semibold text-[color:rgba(22,37,29,0.52)]">Data dan foto sedang disiapkan.</p>
+          </div>
+        </div>
+      ) : null}
       <CardHeader className="gap-4 lg:flex lg:flex-row lg:items-end lg:justify-between">
         <div>
           <CardTitle>Riwayat input survei</CardTitle>
@@ -74,7 +114,7 @@ export function SurveyHistoryTable({ history }: { history: SurveyHistoryPage }) 
                       <ScoreBadge score={Number(row.score)} />
                     </td>
                     <td className="rounded-r-2xl px-3 py-3">
-                      <RowActions id={row.id} />
+                      <RowActions id={row.id} pendingHref={pendingHref} onNavigate={navigate} />
                     </td>
                   </tr>
                 ))}
@@ -114,13 +154,13 @@ export function SurveyHistoryTable({ history }: { history: SurveyHistoryPage }) 
                   </div>
                 </dl>
                 <div className="mt-4">
-                  <RowActions id={row.id} />
+                  <RowActions id={row.id} pendingHref={pendingHref} onNavigate={navigate} />
                 </div>
               </article>
             ))}
           </div>
 
-          <Pagination history={history} />
+          <Pagination history={history} pendingHref={pendingHref} onNavigate={navigate} />
         </>
       )}
     </Card>
@@ -135,19 +175,29 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
-function RowActions({ id }: { id: string }) {
+function RowActions({
+  id,
+  pendingHref,
+  onNavigate,
+}: {
+  id: string;
+  pendingHref: string | null;
+  onNavigate: (event: MouseEvent<HTMLAnchorElement>, href: string) => void;
+}) {
+  const detailHref = `/surveys/${id}`;
+  const editHref = `/surveys/${id}/edit`;
   return (
     <div className="flex flex-wrap justify-end gap-2">
       <Button asChild variant="outline" size="sm" className="min-h-9 px-3 py-1.5 text-xs">
-        <Link href={`/surveys/${id}`}>
-          <Eye className="h-4 w-4" />
-          Detail
+        <Link href={detailHref} onClick={(event) => onNavigate(event, detailHref)}>
+          {pendingHref === detailHref ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+          {pendingHref === detailHref ? "Memuat..." : "Detail"}
         </Link>
       </Button>
       <Button asChild variant="secondary" size="sm" className="min-h-9 px-3 py-1.5 text-xs">
-        <Link href={`/surveys/${id}/edit`}>
-          <FilePenLine className="h-4 w-4" />
-          Edit
+        <Link href={editHref} onClick={(event) => onNavigate(event, editHref)}>
+          {pendingHref === editHref ? <Loader2 className="h-4 w-4 animate-spin" /> : <FilePenLine className="h-4 w-4" />}
+          {pendingHref === editHref ? "Memuat..." : "Edit"}
         </Link>
       </Button>
       <Button asChild size="sm" className="min-h-9 px-3 py-1.5 text-xs">
@@ -160,7 +210,15 @@ function RowActions({ id }: { id: string }) {
   );
 }
 
-function Pagination({ history }: { history: SurveyHistoryPage }) {
+function Pagination({
+  history,
+  pendingHref,
+  onNavigate,
+}: {
+  history: SurveyHistoryPage;
+  pendingHref: string | null;
+  onNavigate: (event: MouseEvent<HTMLAnchorElement>, href: string) => void;
+}) {
   const previousPage = Math.max(1, history.page - 1);
   const nextPage = Math.min(history.totalPages, history.page + 1);
 
@@ -171,7 +229,9 @@ function Pagination({ history }: { history: SurveyHistoryPage }) {
       </p>
       <div className="flex gap-2">
         <Button asChild variant="outline" size="sm" className={history.page <= 1 ? "pointer-events-none opacity-50" : undefined}>
-          <Link href={pageHref(previousPage, history.limit)}>Sebelumnya</Link>
+          <Link href={pageHref(previousPage, history.limit)} onClick={(event) => onNavigate(event, pageHref(previousPage, history.limit))}>
+            {pendingHref === pageHref(previousPage, history.limit) ? "Memuat..." : "Sebelumnya"}
+          </Link>
         </Button>
         <Button
           asChild
@@ -179,7 +239,9 @@ function Pagination({ history }: { history: SurveyHistoryPage }) {
           size="sm"
           className={history.page >= history.totalPages ? "pointer-events-none opacity-50" : undefined}
         >
-          <Link href={pageHref(nextPage, history.limit)}>Berikutnya</Link>
+          <Link href={pageHref(nextPage, history.limit)} onClick={(event) => onNavigate(event, pageHref(nextPage, history.limit))}>
+            {pendingHref === pageHref(nextPage, history.limit) ? "Memuat..." : "Berikutnya"}
+          </Link>
         </Button>
       </div>
     </div>
