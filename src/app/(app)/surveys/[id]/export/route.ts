@@ -92,15 +92,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     .map((field) => ({
       field,
       signature: parseSignatureValue(detail.response.response_values?.[field.field_key]),
-    }))
-    .filter((item): item is { field: typeof item.field; signature: SignatureValue } => Boolean(item.signature));
+    }));
 
   if (signatureFields.length) {
     y += 8;
     y = sectionTitle(pdf, "Tanda Tangan", y);
-    for (const item of signatureFields) {
-      y = writeSignatureField(pdf, item.field.label, item.signature, y);
-    }
+    y = writeSignatureTable(pdf, signatureFields, y);
   }
 
   const bytes = Buffer.from(pdf.output("arraybuffer"));
@@ -187,30 +184,59 @@ async function writePhotoEvidence(pdf: jsPDF, photo: SurveyPhoto, index: number,
   return Math.max(imageBottom, captionBottom) + 18;
 }
 
-function writeSignatureField(pdf: jsPDF, label: string, signature: SignatureValue, y: number) {
+function writeSignatureTable(
+  pdf: jsPDF,
+  items: Array<{ field: { label: string }; signature: SignatureValue | null }>,
+  y: number,
+) {
   const margin = 40;
-  const imageWidth = 180;
-  const imageHeight = 76;
-  y = ensureSpace(pdf, y, imageHeight + 44);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(9);
-  pdf.text(label, margin, y);
-  y += 10;
-  try {
-    pdf.addImage(signature.dataUrl, "PNG", margin, y, imageWidth, imageHeight, undefined, "FAST");
-  } catch {
-    pdf.rect(margin, y, imageWidth, imageHeight);
-    pdf.text("Tanda tangan tidak dapat dimuat.", margin + 10, y + 18);
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const tableWidth = pageWidth - margin * 2;
+  const columnWidth = tableWidth / 2;
+  const headerHeight = 34;
+  const bodyHeight = 96;
+  const rowHeight = headerHeight + bodyHeight;
+
+  for (let index = 0; index < items.length; index += 2) {
+    const rowItems = items.slice(index, index + 2);
+    y = ensureSpace(pdf, y, rowHeight + 16);
+
+    for (let column = 0; column < 2; column += 1) {
+      const item = rowItems[column];
+      const x = margin + column * columnWidth;
+      pdf.rect(x, y, columnWidth, rowHeight);
+      pdf.line(x, y + headerHeight, x + columnWidth, y + headerHeight);
+
+      if (!item) continue;
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(11);
+      const labelLines = pdf.splitTextToSize(item.field.label, columnWidth - 18) as string[];
+      const visibleLabelLines = labelLines.slice(0, 2);
+      const labelStartY = y + 14 + (visibleLabelLines.length === 1 ? 6 : 0);
+      pdf.text(visibleLabelLines, x + columnWidth / 2, labelStartY, {
+        align: "center",
+      });
+
+      if (!item.signature) continue;
+
+      const imageWidth = Math.min(170, columnWidth - 36);
+      const imageHeight = 66;
+      const imageX = x + (columnWidth - imageWidth) / 2;
+      const imageY = y + headerHeight + 14;
+      try {
+        pdf.addImage(item.signature.dataUrl, "PNG", imageX, imageY, imageWidth, imageHeight, undefined, "FAST");
+      } catch {
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8);
+        pdf.text("Tanda tangan tidak dapat dimuat.", x + columnWidth / 2, imageY + 20, { align: "center" });
+      }
+    }
+
+    y += rowHeight + 12;
   }
-  y += imageHeight + 8;
-  pdf.line(margin, y, margin + imageWidth, y);
-  if (signature.signedAt) {
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(8);
-    pdf.text(`Ditandatangani: ${formatDate(signature.signedAt)}`, margin, y + 12);
-    return y + 24;
-  }
-  return y + 14;
+
+  return y;
 }
 
 function parseSignatureValue(value: unknown): SignatureValue | null {
