@@ -3,15 +3,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { TemplateResponseField } from "@/lib/types";
-import { PhotoUploadField } from "@/modules/surveys/components/photo-upload-field";
+import { PhotoUploadField, type ExistingPhotoPreview } from "@/modules/surveys/components/photo-upload-field";
 import { SignatureField } from "@/modules/surveys/components/signature-field";
 
 export function ResponseFieldsCard({
   fields,
+  templateId,
   values = {},
+  photos = [],
+  onPhotoUploadStateChange,
 }: {
   fields: TemplateResponseField[];
+  templateId: string;
   values?: Record<string, unknown>;
+  photos?: ExistingPhotoPreview[];
+  onPhotoUploadStateChange?: (fieldKey: string, isUploading: boolean) => void;
 }) {
   if (fields.length === 0) return null;
 
@@ -23,14 +29,33 @@ export function ResponseFieldsCard({
       </CardHeader>
       <div className="grid gap-4 md:grid-cols-2">
         {fields.map((field) => (
-          <ResponseFieldControl key={field.id} field={field} value={values[field.field_key]} />
+          <ResponseFieldControl
+            key={field.id}
+            field={field}
+            templateId={templateId}
+            value={values[field.field_key]}
+            photos={photos.filter((photo) => photo.fieldKey === field.field_key)}
+            onPhotoUploadStateChange={onPhotoUploadStateChange}
+          />
         ))}
       </div>
     </Card>
   );
 }
 
-function ResponseFieldControl({ field, value }: { field: TemplateResponseField; value?: unknown }) {
+function ResponseFieldControl({
+  field,
+  templateId,
+  value,
+  photos,
+  onPhotoUploadStateChange,
+}: {
+  field: TemplateResponseField;
+  templateId: string;
+  value?: unknown;
+  photos: ExistingPhotoPreview[];
+  onPhotoUploadStateChange?: (fieldKey: string, isUploading: boolean) => void;
+}) {
   const id = `response-${field.field_key}`;
   const name = `response.${field.field_key}`;
   const defaultValue = typeof value === "string" ? value : "";
@@ -40,11 +65,15 @@ function ResponseFieldControl({ field, value }: { field: TemplateResponseField; 
     return (
       <PhotoUploadField
         id={id}
-        name={`responseFiles.${field.field_key}`}
+        fieldKey={field.field_key}
+        name={`uploadedPhotos.${field.field_key}`}
         label={field.label}
         placeholder={field.placeholder}
         required={field.is_required}
         maxSizeMb={maxSizeMb}
+        templateId={templateId}
+        existingPhotos={photos}
+        onUploadStateChange={onPhotoUploadStateChange}
       />
     );
   }

@@ -13,6 +13,8 @@ type StoredFile = {
   provider: "metadata-api" | "supabase";
 };
 
+export type StoredEvidenceFile = StoredFile;
+
 type MetadataUploadResponse = {
   ok: boolean;
   path?: string;

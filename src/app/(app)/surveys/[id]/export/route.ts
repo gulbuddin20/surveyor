@@ -19,24 +19,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const margin = 40;
   let y = 44;
 
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(14);
-  pdf.text("FORMULIR INSPEKSI KESEHATAN LINGKUNGAN", pageWidth / 2, y, { align: "center" });
-  y += 18;
-  pdf.setFontSize(12);
-  pdf.text(detail.template.name.toUpperCase(), pageWidth / 2, y, { align: "center" });
-  y += 24;
+  y = writeCenteredHeading(pdf, "FORMULIR INSPEKSI KESEHATAN LINGKUNGAN", y, 14);
+  y = writeCenteredHeading(pdf, detail.template.name.toUpperCase(), y, 12);
+  y += 8;
 
   y = sectionTitle(pdf, "Identitas MSME/TPP", y);
   for (const field of detail.identityFields) {
     const value = detail.subject.metadata[field.field_key];
-    y = ensureSpace(pdf, y, 36);
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(9);
-    pdf.text(field.label, margin, y);
-    pdf.setFont("helvetica", "normal");
-    y = writeWrapped(pdf, String(value || "-"), margin + 190, y, 320, 10);
-    y += 8;
+    y = writeLine(pdf, field.label, String(value || "-"), y);
   }
 
   y += 8;
@@ -83,8 +73,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       y = writeWrapped(pdf, "Tidak ada foto bukti diunggah.", margin, y, pageWidth - margin * 2, 10) + 8;
     }
     const photoFieldLabels = new Map(detail.responseFields.map((field) => [field.field_key, field.label]));
-    for (const [index, photo] of detail.photos.entries()) {
-      y = await writePhotoEvidence(pdf, photo, index, y, photoFieldLabels.get(photo.field_key ?? "") ?? "Foto bukti");
+    const photoEvidence = await Promise.all(detail.photos.map(async (photo, index) => ({
+      photo,
+      index,
+      image: await getPhotoImageData(photo),
+      fieldLabel: photoFieldLabels.get(photo.field_key ?? "") ?? "Foto bukti",
+    })));
+    for (const item of photoEvidence) {
+      y = writePhotoEvidence(pdf, item.photo, item.index, y, item.fieldLabel, item.image);
     }
   }
 
@@ -120,13 +116,30 @@ function sectionTitle(pdf: jsPDF, title: string, y: number) {
   return y + 24;
 }
 
+function writeCenteredHeading(pdf: jsPDF, text: string, y: number, fontSize: number) {
+  y = ensureSpace(pdf, y, 44);
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(fontSize);
+  const lines = pdf.splitTextToSize(text, pageWidth - 120) as string[];
+  pdf.text(lines, pageWidth / 2, y, { align: "center" });
+  return y + lines.length * (fontSize + 4);
+}
+
 function writeLine(pdf: jsPDF, label: string, value: string, y: number) {
-  y = ensureSpace(pdf, y, 32);
+  const labelX = 40;
+  const valueX = 210;
+  const lineHeight = 10;
+  const labelLines = pdf.splitTextToSize(label, 154) as string[];
+  const valueLines = pdf.splitTextToSize(value, 340) as string[];
+  const rowHeight = Math.max(labelLines.length, valueLines.length) * lineHeight + 8;
+  y = ensureSpace(pdf, y, rowHeight + 8);
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(9);
-  pdf.text(label, 40, y);
+  pdf.text(labelLines, labelX, y);
   pdf.setFont("helvetica", "normal");
-  return writeWrapped(pdf, value, 210, y, 340, 10) + 8;
+  pdf.text(valueLines, valueX, y);
+  return y + rowHeight;
 }
 
 function writeWrapped(pdf: jsPDF, text: string, x: number, y: number, width: number, lineHeight: number) {
@@ -145,7 +158,14 @@ function ensureSpace(pdf: jsPDF, y: number, needed: number) {
   return 44;
 }
 
-async function writePhotoEvidence(pdf: jsPDF, photo: SurveyPhoto, index: number, y: number, fieldLabel: string) {
+function writePhotoEvidence(
+  pdf: jsPDF,
+  photo: SurveyPhoto,
+  index: number,
+  y: number,
+  fieldLabel: string,
+  image: { dataUrl: string; format: "JPEG" | "PNG" | "WEBP" } | null,
+) {
   const margin = 40;
   const pageWidth = pdf.internal.pageSize.getWidth();
   const maxWidth = pageWidth - margin * 2;
@@ -166,7 +186,6 @@ async function writePhotoEvidence(pdf: jsPDF, photo: SurveyPhoto, index: number,
   pdf.text(photo.file_name ?? "Foto bukti", margin + 60, y);
   y += 12;
 
-  const image = await getPhotoImageData(photo);
   if (image) {
     try {
       pdf.addImage(image.dataUrl, image.format, margin, y, imageWidth, imageHeight, undefined, "FAST");

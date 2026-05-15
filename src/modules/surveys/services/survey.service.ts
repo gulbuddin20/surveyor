@@ -26,6 +26,14 @@ type PendingSignature = {
   dataUrl: string;
   signedAt: string;
 };
+type UploadedPhotoPayload = {
+  storagePath: string;
+  fileName: string;
+  mimeType: string;
+  fileSizeBytes: number;
+  sha256?: string;
+  provider?: string;
+};
 
 export async function getSurveyStartData() {
   return { templates: await listActiveTemplates() };
@@ -148,17 +156,21 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
       const files = formData
         .getAll(`responseFiles.${field.field_key}`)
         .filter((value): value is File => value instanceof File && value.size > 0);
+      const uploaded = formData
+        .getAll(`uploadedPhotos.${field.field_key}`)
+        .map((value) => parseUploadedPhotoPayload(String(value)))
+        .filter((value): value is UploadedPhotoPayload => Boolean(value));
       const maxSizeMb = typeof field.settings?.max_size_mb === "number"
         ? field.settings.max_size_mb
         : Number(template.photo_max_size_mb);
-      return { field, files, maxSizeMb };
+      return { field, files, uploaded, maxSizeMb };
     });
 
   for (const input of photoInputs) {
-    if (input.files.length > maxPhotoFilesPerField) {
+    if (input.files.length + input.uploaded.length > maxPhotoFilesPerField) {
       return { ok: false, message: `${input.field.label} maksimal ${maxPhotoFilesPerField} foto` };
     }
-    if (input.field.is_required && !responseId && input.files.length === 0) {
+    if (input.field.is_required && !responseId && input.files.length === 0 && input.uploaded.length === 0) {
       return { ok: false, message: `${input.field.label} wajib diunggah` };
     }
     const maxBytes = input.maxSizeMb * 1024 * 1024;
@@ -243,24 +255,44 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
   const photoRows = await Promise.all(
     photoInputs.flatMap((input) => {
       const maxOutputBytes = input.files.length === 1 ? singlePhotoTargetBytes : multiPhotoTargetBytes;
-      return input.files.map((file) => ({
-        file,
-        fieldKey: input.field.field_key,
-        maxOutputBytes,
-      }));
-    }).map(async ({ file, fieldKey, maxOutputBytes }) => {
+      return [
+        ...input.uploaded.map((photo) => ({
+          kind: "uploaded" as const,
+          photo,
+          fieldKey: input.field.field_key,
+        })),
+        ...input.files.map((file) => ({
+          kind: "file" as const,
+          file,
+          fieldKey: input.field.field_key,
+          maxOutputBytes,
+        })),
+      ];
+    }).map(async (input) => {
+      if (input.kind === "uploaded") {
+        return {
+          response_id: finalResponseId,
+          question_id: null,
+          field_key: input.fieldKey,
+          storage_path: input.photo.storagePath,
+          file_name: input.photo.fileName,
+          mime_type: input.photo.mimeType,
+          file_size_bytes: input.photo.fileSizeBytes,
+          caption: null,
+        };
+      }
       const stored = await uploadEvidencePhoto({
         userId: profile.id,
         responseId: finalResponseId,
-        file,
-        maxOutputBytes,
+        file: input.file,
+        maxOutputBytes: input.maxOutputBytes,
       });
       return {
         response_id: finalResponseId,
         question_id: null,
-        field_key: fieldKey,
+        field_key: input.fieldKey,
         storage_path: stored.storagePath,
-        file_name: file.name,
+        file_name: input.file.name,
         mime_type: stored.mimeType,
         file_size_bytes: stored.fileSizeBytes,
         caption: null,
@@ -342,4 +374,30 @@ function parseSignaturePayload(value: string): { dataUrl: string; signedAt: stri
 
 function getTextResponseValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value : null;
+}
+
+function parseUploadedPhotoPayload(value: string): UploadedPhotoPayload | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const storagePath = "storagePath" in parsed ? parsed.storagePath : null;
+  const fileName = "fileName" in parsed ? parsed.fileName : null;
+  const mimeType = "mimeType" in parsed ? parsed.mimeType : null;
+  const fileSizeBytes = "fileSizeBytes" in parsed ? parsed.fileSizeBytes : null;
+  if (typeof storagePath !== "string" || !storagePath.trim()) return null;
+  if (typeof fileName !== "string" || !fileName.trim()) return null;
+  if (typeof mimeType !== "string" || !mimeType.trim()) return null;
+  if (typeof fileSizeBytes !== "number" || !Number.isFinite(fileSizeBytes)) return null;
+  return {
+    storagePath,
+    fileName,
+    mimeType,
+    fileSizeBytes,
+    sha256: "sha256" in parsed && typeof parsed.sha256 === "string" ? parsed.sha256 : undefined,
+    provider: "provider" in parsed && typeof parsed.provider === "string" ? parsed.provider : undefined,
+  };
 }

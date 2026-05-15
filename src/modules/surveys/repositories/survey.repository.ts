@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { uploadEvidenceFile } from "@/modules/surveys/repositories/evidence-storage";
+import { uploadEvidenceFile, type StoredEvidenceFile } from "@/modules/surveys/repositories/evidence-storage";
 import type {
   FormulaRule,
   MsmeSubject,
@@ -236,7 +236,7 @@ export async function uploadEvidencePhoto({
   responseId: string;
   file: File;
   maxOutputBytes: number;
-}) {
+}): Promise<StoredEvidenceFile> {
   const originalName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-120) || "evidence";
   const cleanName = originalName.replace(/\.[^.]+$/, "") || "evidence";
   const compressed = await compressEvidencePhoto(file, maxOutputBytes);

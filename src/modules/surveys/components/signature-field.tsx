@@ -133,8 +133,10 @@ function parseSignatureValue(value: unknown): SignaturePayload | null {
   if (!parsed || typeof parsed !== "object") return null;
   const storagePath = "storagePath" in parsed ? parsed.storagePath : null;
   if (typeof storagePath === "string" && storagePath.trim()) {
+    const dataUrl = "dataUrl" in parsed ? parsed.dataUrl : null;
     return {
       storagePath,
+      dataUrl: typeof dataUrl === "string" && dataUrl.startsWith("data:image/") ? dataUrl : undefined,
       signedAt: "signedAt" in parsed && typeof parsed.signedAt === "string" ? parsed.signedAt : undefined,
       sha256: "sha256" in parsed && typeof parsed.sha256 === "string" ? parsed.sha256 : undefined,
       mimeType: "mimeType" in parsed && typeof parsed.mimeType === "string" ? parsed.mimeType : undefined,

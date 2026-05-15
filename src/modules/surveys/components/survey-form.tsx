@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Save } from "lucide-react";
 import { ConfirmedSubmitButton } from "@/components/ui/confirmed-submit-button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import type { SectionWithQuestions, SurveyResultDetail, TemplateDetail } from "@/lib/types";
 import { IdentityFieldsCard } from "@/modules/surveys/components/identity-fields-card";
 import { ResponseFieldsCard } from "@/modules/surveys/components/response-fields-card";
+import type { ExistingPhotoPreview } from "@/modules/surveys/components/photo-upload-field";
 import { calculateSurveyProgress, calculateSurveyScore, flattenQuestions } from "@/modules/surveys/services/formula.service";
 import { submitSurveyAction } from "@/modules/surveys/controllers/survey.controller";
 import { useSurveyWizardStore } from "@/stores/survey-wizard.store";
@@ -16,16 +17,20 @@ export function SurveyForm({
   template,
   mode = "create",
   initialDetail,
+  initialPhotoPreviews = [],
 }: {
   template: TemplateDetail;
   mode?: "create" | "edit";
   initialDetail?: SurveyResultDetail;
+  initialPhotoPreviews?: ExistingPhotoPreview[];
 }) {
   const selectedQuestionIds = useSurveyWizardStore((state) => state.selectedQuestionIds);
   const setSelectedQuestionIds = useSurveyWizardStore((state) => state.setSelectedQuestionIds);
   const toggleQuestion = useSurveyWizardStore((state) => state.toggleQuestion);
   const reset = useSurveyWizardStore((state) => state.reset);
+  const [uploadingPhotoFields, setUploadingPhotoFields] = useState<Record<string, boolean>>({});
   const questions = useMemo(() => flattenQuestions(template.sections), [template]);
+  const hasPendingPhotoUpload = Object.values(uploadingPhotoFields).some(Boolean);
   const result = calculateSurveyScore(questions, selectedQuestionIds, {
     formula: template.formula,
     templateDenominator: template.denominator,
@@ -40,6 +45,13 @@ export function SurveyForm({
     }
     reset();
   }, [initialDetail, reset, setSelectedQuestionIds, template.id]);
+
+  const handlePhotoUploadStateChange = useCallback((fieldKey: string, isUploading: boolean) => {
+    setUploadingPhotoFields((current) => {
+      if (current[fieldKey] === isUploading) return current;
+      return { ...current, [fieldKey]: isUploading };
+    });
+  }, []);
 
   return (
     <form action={submitSurveyAction} className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -58,7 +70,13 @@ export function SurveyForm({
             onToggleQuestion={toggleQuestion}
           />
         ))}
-        <ResponseFieldsCard fields={template.responseFields} values={initialDetail?.response.response_values} />
+        <ResponseFieldsCard
+          fields={template.responseFields}
+          templateId={template.id}
+          values={initialDetail?.response.response_values}
+          photos={initialPhotoPreviews}
+          onPhotoUploadStateChange={handlePhotoUploadStateChange}
+        />
         {initialDetail?.photos.length ? (
           <p className="rounded-2xl bg-[color:rgba(255,249,234,0.62)] p-3 text-sm font-semibold text-[color:rgba(22,37,29,0.58)]">
             {initialDetail.photos.length} foto lama tetap tersimpan. Upload foto baru hanya menambahkan bukti tambahan.
@@ -88,13 +106,14 @@ export function SurveyForm({
             </p>
             <ConfirmedSubmitButton
               className="w-full"
+              disabled={hasPendingPhotoUpload}
               confirmActionLabel={mode === "edit" ? "Ya, simpan perubahan" : "Ya, simpan survei"}
               confirmDescription="Hasil survei akan disimpan ke database. Periksa kembali identitas, jawaban, foto, dan catatan sebelum melanjutkan."
               confirmTitle={mode === "edit" ? "Simpan perubahan survei?" : "Simpan survei baru?"}
               pendingLabel={mode === "edit" ? "Menyimpan perubahan..." : "Menyimpan survei..."}
             >
               <Save className="h-4 w-4" />
-              {mode === "edit" ? "Simpan perubahan" : "Simpan survei"}
+              {hasPendingPhotoUpload ? "Menunggu foto selesai..." : mode === "edit" ? "Simpan perubahan" : "Simpan survei"}
             </ConfirmedSubmitButton>
           </div>
         </Card>

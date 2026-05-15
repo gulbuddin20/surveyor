@@ -7,6 +7,14 @@ import { loadSurveyResultController } from "@/modules/surveys/controllers/survey
 import { downloadEvidenceFile } from "@/modules/surveys/repositories/evidence-storage";
 
 type SignatureDisplayValue = { dataUrl: string; signedAt?: string };
+type PhotoDisplayValue = {
+  id: string;
+  fieldKey: string | null;
+  fileName: string | null;
+  caption: string | null;
+  storagePath: string;
+  dataUrl: string | null;
+};
 
 export default async function SurveyResultPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -22,6 +30,7 @@ export default async function SurveyResultPage({ params }: { params: Promise<{ i
     })),
   );
   const photoFieldLabels = new Map(detail.responseFields.map((field) => [field.field_key, field.label]));
+  const photoBlocks = await Promise.all(detail.photos.map(getPhotoDisplayValue));
   return (
     <div className="atlas-reveal mx-auto max-w-5xl space-y-5">
       <Card>
@@ -98,12 +107,15 @@ export default async function SurveyResultPage({ params }: { params: Promise<{ i
             </div>
           ))}
           <div className="grid gap-3 md:grid-cols-2">
-            {detail.photos.map((photo) => (
+            {photoBlocks.map((photo) => (
               <div key={photo.id} className="rounded-2xl border border-[color:rgba(22,37,29,0.1)] bg-[var(--atlas-paper)] p-3 text-sm text-[color:rgba(22,37,29,0.62)]">
-                <p className="font-extrabold text-[var(--atlas-ink)]">{photoFieldLabels.get(photo.field_key ?? "") ?? "Foto bukti"}</p>
-                <p>{photo.file_name ?? "Foto bukti"}</p>
+                {photo.dataUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photo.dataUrl} alt={photo.fileName ?? "Foto bukti"} className="mb-3 aspect-[4/3] w-full rounded-[1.25rem] object-cover" />
+                ) : null}
+                <p className="font-extrabold text-[var(--atlas-ink)]">{photoFieldLabels.get(photo.fieldKey ?? "") ?? "Foto bukti"}</p>
+                <p>{photo.fileName ?? "Foto bukti"}</p>
                 <p>{photo.caption ?? "Tanpa keterangan"}</p>
-                <p className="mt-1 text-xs text-[color:rgba(22,37,29,0.4)]">{photo.storage_path}</p>
               </div>
             ))}
           </div>
@@ -111,6 +123,25 @@ export default async function SurveyResultPage({ params }: { params: Promise<{ i
       </Card>
     </div>
   );
+}
+
+async function getPhotoDisplayValue(photo: {
+  id: string;
+  field_key: string | null;
+  file_name: string | null;
+  caption: string | null;
+  storage_path: string;
+  mime_type: string | null;
+}): Promise<PhotoDisplayValue> {
+  const data = await downloadEvidenceFile(photo.storage_path);
+  return {
+    id: photo.id,
+    fieldKey: photo.field_key,
+    fileName: photo.file_name,
+    caption: photo.caption,
+    storagePath: photo.storage_path,
+    dataUrl: data ? `data:${photo.mime_type ?? data.mimeType};base64,${data.buffer.toString("base64")}` : null,
+  };
 }
 
 function NoteBlock({ title, value }: { title: string; value: string | null }) {
