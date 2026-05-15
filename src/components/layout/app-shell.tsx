@@ -171,8 +171,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
         </header>
         <div
           className={cn(
-            "mx-auto w-full max-w-7xl px-4 py-5 transition-opacity sm:px-6 md:py-8 lg:px-8",
-            showRoutePending && "opacity-60",
+            "mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 md:py-8 lg:px-8",
           )}
         >
           {children}

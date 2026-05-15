@@ -2,9 +2,9 @@ import { Button } from "@/components/ui/button";
 import { ActionForm } from "@/components/ui/action-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import type { TemplateIdentityField } from "@/lib/types";
 import { saveIdentityFieldAction } from "@/modules/admin/controllers/admin.controller";
+import { IdentityFieldTypeControls } from "@/modules/admin/components/identity-field-type-controls";
 
 export function IdentityFieldForm({
   templateId,
@@ -31,21 +31,7 @@ export function IdentityFieldForm({
         <Label>Kunci</Label>
         <Input name="fieldKey" defaultValue={field?.field_key} placeholder="nib" required />
       </div>
-      <div className="space-y-2 lg:col-span-2">
-        <Label>Tipe</Label>
-        <select
-          name="fieldType"
-          defaultValue={field?.field_type ?? "text"}
-          className="atlas-select"
-        >
-          <option value="text">text</option>
-          <option value="textarea">textarea</option>
-          <option value="number">number</option>
-          <option value="date">date</option>
-          <option value="time">time</option>
-          <option value="select">select</option>
-        </select>
-      </div>
+      <IdentityFieldTypeControls defaultType={field?.field_type} options={field?.options ?? []} />
       <div className="space-y-2 lg:col-span-3">
         <Label>Placeholder</Label>
         <Input name="placeholder" defaultValue={field?.placeholder ?? ""} placeholder="Petunjuk singkat" />
@@ -53,14 +39,6 @@ export function IdentityFieldForm({
       <div className="space-y-2 lg:col-span-2">
         <Label>Urutan</Label>
         <Input name="sortOrder" type="number" defaultValue={field?.sort_order ?? 0} />
-      </div>
-      <div className="space-y-2 lg:col-span-8">
-        <Label>Opsi select</Label>
-        <Textarea
-          name="optionsText"
-          defaultValue={(field?.options ?? []).join("\n")}
-          placeholder="Satu opsi per baris, hanya untuk tipe select"
-        />
       </div>
       <label className="flex items-center gap-2 text-sm font-extrabold text-[var(--atlas-ink)] lg:col-span-1 lg:pt-8">
         <input name="isRequired" type="checkbox" defaultChecked={field?.is_required ?? false} />
