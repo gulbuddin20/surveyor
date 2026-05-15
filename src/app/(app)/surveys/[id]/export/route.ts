@@ -8,6 +8,7 @@ import { formatDate, formatNumber } from "@/lib/utils";
 
 const maxEmbeddedPhotoBytes = 8 * 1024 * 1024;
 type SignatureValue = { dataUrl: string; signedAt?: string };
+type StoredSignatureValue = { storagePath: string; signedAt?: string; mimeType?: string };
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -87,12 +88,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     }
   }
 
-  const signatureFields = detail.responseFields
-    .filter((field) => field.field_type === "signature")
-    .map((field) => ({
+  const signatureFields = await Promise.all(
+    detail.responseFields.filter((field) => field.field_type === "signature").map(async (field) => ({
       field,
-      signature: parseSignatureValue(detail.response.response_values?.[field.field_key]),
-    }));
+      signature: await getSignatureImageData(detail.response.response_values?.[field.field_key]),
+    })),
+  );
 
   if (signatureFields.length) {
     y += 8;
@@ -239,9 +240,34 @@ function writeSignatureTable(
   return y;
 }
 
-function parseSignatureValue(value: unknown): SignatureValue | null {
+async function getSignatureImageData(value: unknown): Promise<SignatureValue | null> {
+  const parsed = parseSignatureValue(value);
+  if (!parsed) return null;
+  if ("dataUrl" in parsed) return parsed;
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.storage.from("survey-evidence").download(parsed.storagePath);
+  if (error || !data) return null;
+  if (data.size > maxEmbeddedPhotoBytes) return null;
+
+  const buffer = Buffer.from(await data.arrayBuffer());
+  return {
+    dataUrl: `data:${parsed.mimeType ?? "image/png"};base64,${buffer.toString("base64")}`,
+    signedAt: parsed.signedAt,
+  };
+}
+
+function parseSignatureValue(value: unknown): SignatureValue | StoredSignatureValue | null {
   const parsed = typeof value === "string" ? safeParseJson(value) : value;
   if (!parsed || typeof parsed !== "object") return null;
+  const storagePath = "storagePath" in parsed ? parsed.storagePath : null;
+  if (typeof storagePath === "string" && storagePath.trim()) {
+    return {
+      storagePath,
+      signedAt: "signedAt" in parsed && typeof parsed.signedAt === "string" ? parsed.signedAt : undefined,
+      mimeType: "mimeType" in parsed && typeof parsed.mimeType === "string" ? parsed.mimeType : undefined,
+    };
+  }
   const dataUrl = "dataUrl" in parsed ? parsed.dataUrl : null;
   const signedAt = "signedAt" in parsed ? parsed.signedAt : null;
   if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/png;base64,")) return null;

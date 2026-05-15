@@ -2,8 +2,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatDate, formatNumber } from "@/lib/utils";
 import { loadSurveyResultController } from "@/modules/surveys/controllers/survey.controller";
+
+type SignatureDisplayValue = { dataUrl: string; signedAt?: string };
 
 export default async function SurveyResultPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -12,6 +15,12 @@ export default async function SurveyResultPage({ params }: { params: Promise<{ i
   const responseValues = detail.response.response_values ?? {};
   const textResponseFields = detail.responseFields.filter((field) => !["photo", "signature"].includes(field.field_type));
   const signatureFields = detail.responseFields.filter((field) => field.field_type === "signature");
+  const signatureBlocks = await Promise.all(
+    signatureFields.map(async (field) => ({
+      field,
+      signature: await getSignatureDisplayValue(responseValues[field.field_key]),
+    })),
+  );
   const photoFieldLabels = new Map(detail.responseFields.map((field) => [field.field_key, field.label]));
   return (
     <div className="atlas-reveal mx-auto max-w-5xl space-y-5">
@@ -67,8 +76,8 @@ export default async function SurveyResultPage({ params }: { params: Promise<{ i
         ) : null}
         {signatureFields.length ? (
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {signatureFields.map((field) => (
-              <SignatureBlock key={field.id} title={field.label} value={responseValues[field.field_key]} />
+            {signatureBlocks.map(({ field, signature }) => (
+              <SignatureBlock key={field.id} title={field.label} signature={signature} />
             ))}
           </div>
         ) : null}
@@ -113,8 +122,7 @@ function NoteBlock({ title, value }: { title: string; value: string | null }) {
   );
 }
 
-function SignatureBlock({ title, value }: { title: string; value: unknown }) {
-  const signature = parseSignatureValue(value);
+function SignatureBlock({ title, signature }: { title: string; signature: SignatureDisplayValue | null }) {
   return (
     <div className="rounded-2xl bg-[color:rgba(255,249,234,0.52)] p-4">
       <p className="text-sm font-extrabold text-[var(--atlas-ink)]">{title}</p>
@@ -133,9 +141,32 @@ function SignatureBlock({ title, value }: { title: string; value: unknown }) {
   );
 }
 
-function parseSignatureValue(value: unknown): { dataUrl: string; signedAt?: string } | null {
+async function getSignatureDisplayValue(value: unknown): Promise<SignatureDisplayValue | null> {
+  const parsed = parseSignatureValue(value);
+  if (!parsed) return null;
+  if ("dataUrl" in parsed) return parsed;
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.storage.from("survey-evidence").download(parsed.storagePath);
+  if (error || !data) return null;
+  const buffer = Buffer.from(await data.arrayBuffer());
+  return {
+    dataUrl: `data:${parsed.mimeType ?? "image/png"};base64,${buffer.toString("base64")}`,
+    signedAt: parsed.signedAt,
+  };
+}
+
+function parseSignatureValue(value: unknown): SignatureDisplayValue | { storagePath: string; signedAt?: string; mimeType?: string } | null {
   const parsed = typeof value === "string" ? safeParseJson(value) : value;
   if (!parsed || typeof parsed !== "object") return null;
+  const storagePath = "storagePath" in parsed ? parsed.storagePath : null;
+  if (typeof storagePath === "string" && storagePath.trim()) {
+    return {
+      storagePath,
+      signedAt: "signedAt" in parsed && typeof parsed.signedAt === "string" ? parsed.signedAt : undefined,
+      mimeType: "mimeType" in parsed && typeof parsed.mimeType === "string" ? parsed.mimeType : undefined,
+    };
+  }
   const dataUrl = "dataUrl" in parsed ? parsed.dataUrl : null;
   const signedAt = "signedAt" in parsed ? parsed.signedAt : null;
   if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/png;base64,")) return null;

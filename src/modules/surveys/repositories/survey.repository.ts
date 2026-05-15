@@ -1,3 +1,4 @@
+import { createHash, randomUUID } from "node:crypto";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   FormulaRule,
@@ -241,6 +242,38 @@ export async function uploadEvidencePhoto({
   });
   if (error) throw error;
   return path;
+}
+
+export async function uploadSignatureImage({
+  userId,
+  responseId,
+  fieldKey,
+  dataUrl,
+}: {
+  userId: string;
+  responseId: string;
+  fieldKey: string;
+  dataUrl: string;
+}) {
+  const match = /^data:image\/png;base64,([a-zA-Z0-9+/=]+)$/.exec(dataUrl);
+  if (!match) throw new Error("Format tanda tangan tidak valid");
+
+  const buffer = Buffer.from(match[1], "base64");
+  const safeFieldKey = fieldKey.replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 80) || "signature";
+  const path = `${userId}/${responseId}/signatures/${safeFieldKey}-${randomUUID()}.png`;
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.storage.from("survey-evidence").upload(path, buffer, {
+    contentType: "image/png",
+    upsert: false,
+  });
+  if (error) throw error;
+
+  return {
+    storagePath: path,
+    mimeType: "image/png",
+    fileSizeBytes: buffer.length,
+    sha256: createHash("sha256").update(buffer).digest("hex"),
+  };
 }
 
 export async function createPhotos(inputs: Array<Omit<SurveyPhoto, "id" | "created_at">>) {

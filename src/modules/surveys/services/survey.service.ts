@@ -13,10 +13,16 @@ import {
   updateResponse,
   updateSubject,
   uploadEvidencePhoto,
+  uploadSignatureImage,
 } from "@/modules/surveys/repositories/survey.repository";
 import { calculateSurveyScore } from "@/modules/surveys/services/formula.service";
 
 const maxSignatureDataUrlBytes = 250000;
+type PendingSignature = {
+  fieldKey: string;
+  dataUrl: string;
+  signedAt: string;
+};
 
 export async function getSurveyStartData() {
   return { templates: await listActiveTemplates() };
@@ -97,6 +103,7 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
   }
 
   const normalizedResponseValues: Record<string, unknown> = { ...parsed.data.responseValues };
+  const pendingSignatures: PendingSignature[] = [];
 
   for (const field of template.responseFields) {
     if (
@@ -119,7 +126,16 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
 
     const signature = parseSignaturePayload(rawValue);
     if (!signature) return { ok: false, message: `${field.label} tidak valid` };
-    normalizedResponseValues[field.field_key] = signature;
+    if ("storagePath" in signature) {
+      normalizedResponseValues[field.field_key] = signature;
+    } else {
+      pendingSignatures.push({
+        fieldKey: field.field_key,
+        dataUrl: signature.dataUrl,
+        signedAt: signature.signedAt,
+      });
+      delete normalizedResponseValues[field.field_key];
+    }
   }
 
   const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -232,6 +248,33 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
   );
   await createPhotos(photoRows);
 
+  if (pendingSignatures.length) {
+    const signatureValues = Object.fromEntries(
+      await Promise.all(
+        pendingSignatures.map(async (signature) => {
+          const stored = await uploadSignatureImage({
+            userId: profile.id,
+            responseId: finalResponseId,
+            fieldKey: signature.fieldKey,
+            dataUrl: signature.dataUrl,
+          });
+          return [
+            signature.fieldKey,
+            {
+              ...stored,
+              signedAt: signature.signedAt,
+            },
+          ] as const;
+        }),
+      ),
+    );
+    Object.assign(normalizedResponseValues, signatureValues);
+    await updateResponse(finalResponseId, {
+      response_values: normalizedResponseValues,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
   return { ok: true, responseId: finalResponseId };
 }
 
@@ -242,7 +285,7 @@ function flattenQuestions(sections: SectionWithQuestions[]): SurveyQuestion[] {
   ]);
 }
 
-function parseSignaturePayload(value: string): { dataUrl: string; signedAt: string } | null {
+function parseSignaturePayload(value: string): { dataUrl: string; signedAt: string } | { storagePath: string; signedAt?: string; sha256?: string; mimeType?: string; fileSizeBytes?: number } | null {
   if (value.length > maxSignatureDataUrlBytes) return null;
   let parsed: unknown;
   try {
@@ -251,6 +294,20 @@ function parseSignaturePayload(value: string): { dataUrl: string; signedAt: stri
     return null;
   }
   if (!parsed || typeof parsed !== "object") return null;
+  const storagePath = "storagePath" in parsed ? parsed.storagePath : null;
+  if (typeof storagePath === "string" && storagePath.trim()) {
+    const signedAt = "signedAt" in parsed ? parsed.signedAt : null;
+    const sha256 = "sha256" in parsed ? parsed.sha256 : null;
+    const mimeType = "mimeType" in parsed ? parsed.mimeType : null;
+    const fileSizeBytes = "fileSizeBytes" in parsed ? parsed.fileSizeBytes : null;
+    return {
+      storagePath,
+      signedAt: typeof signedAt === "string" ? signedAt : undefined,
+      sha256: typeof sha256 === "string" ? sha256 : undefined,
+      mimeType: typeof mimeType === "string" ? mimeType : undefined,
+      fileSizeBytes: typeof fileSizeBytes === "number" ? fileSizeBytes : undefined,
+    };
+  }
   const dataUrl = "dataUrl" in parsed ? parsed.dataUrl : null;
   const signedAt = "signedAt" in parsed ? parsed.signedAt : null;
   if (typeof dataUrl !== "string") return null;

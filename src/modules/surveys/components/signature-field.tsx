@@ -7,8 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
 type SignaturePayload = {
-  dataUrl: string;
-  signedAt: string;
+  dataUrl?: string;
+  storagePath?: string;
+  signedAt?: string;
+  sha256?: string;
+  mimeType?: string;
+  fileSizeBytes?: number;
 };
 
 type SignatureFieldProps = {
@@ -23,7 +27,8 @@ type SignatureFieldProps = {
 export function SignatureField({ id, name, label, placeholder, required = false, value }: SignatureFieldProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const padRef = useRef<SignaturePad | null>(null);
-  const initialDataUrl = useMemo(() => parseSignatureValue(value)?.dataUrl ?? "", [value]);
+  const initialSignature = useMemo(() => parseSignatureValue(value), [value]);
+  const initialDataUrl = initialSignature?.dataUrl ?? "";
   const [fieldValue, setFieldValue] = useState(() => {
     const parsed = parseSignatureValue(value);
     return parsed ? JSON.stringify(parsed) : "";
@@ -113,6 +118,11 @@ export function SignatureField({ id, name, label, placeholder, required = false,
         <p className="mt-2 text-xs leading-5 text-[color:rgba(22,37,29,0.58)]">
           {placeholder ?? "Tanda tangani langsung menggunakan layar sentuh, stylus, atau mouse."}
         </p>
+        {initialSignature?.storagePath && !fieldValue.startsWith("{\"dataUrl\"") ? (
+          <p className="mt-2 rounded-xl bg-[color:rgba(121,168,77,0.12)] px-3 py-2 text-xs font-bold text-[var(--atlas-canopy)]">
+            Tanda tangan tersimpan. Tanda tangan baru akan mengganti file lama saat survei disimpan.
+          </p>
+        ) : null}
       </div>
     </div>
   );
@@ -121,12 +131,22 @@ export function SignatureField({ id, name, label, placeholder, required = false,
 function parseSignatureValue(value: unknown): SignaturePayload | null {
   const parsed = typeof value === "string" ? safeParseJson(value) : value;
   if (!parsed || typeof parsed !== "object") return null;
+  const storagePath = "storagePath" in parsed ? parsed.storagePath : null;
+  if (typeof storagePath === "string" && storagePath.trim()) {
+    return {
+      storagePath,
+      signedAt: "signedAt" in parsed && typeof parsed.signedAt === "string" ? parsed.signedAt : undefined,
+      sha256: "sha256" in parsed && typeof parsed.sha256 === "string" ? parsed.sha256 : undefined,
+      mimeType: "mimeType" in parsed && typeof parsed.mimeType === "string" ? parsed.mimeType : undefined,
+      fileSizeBytes: "fileSizeBytes" in parsed && typeof parsed.fileSizeBytes === "number" ? parsed.fileSizeBytes : undefined,
+    };
+  }
   const dataUrl = "dataUrl" in parsed ? parsed.dataUrl : null;
   const signedAt = "signedAt" in parsed ? parsed.signedAt : null;
   if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/png;base64,")) return null;
   return {
     dataUrl,
-    signedAt: typeof signedAt === "string" ? signedAt : "",
+    signedAt: typeof signedAt === "string" ? signedAt : undefined,
   };
 }
 
