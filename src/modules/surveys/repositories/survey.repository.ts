@@ -1,5 +1,6 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { uploadEvidenceFile } from "@/modules/surveys/repositories/evidence-storage";
 import type {
   FormulaRule,
   MsmeSubject,
@@ -233,15 +234,10 @@ export async function uploadEvidencePhoto({
   responseId: string;
   file: File;
 }) {
-  const supabase = await createSupabaseServerClient();
   const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-120) || "evidence";
-  const path = `${userId}/${responseId}/${crypto.randomUUID()}-${cleanName}`;
-  const { error } = await supabase.storage.from("survey-evidence").upload(path, file, {
-    contentType: file.type,
-    upsert: false,
-  });
-  if (error) throw error;
-  return path;
+  const path = `${userId}/${responseId}/${randomUUID()}-${cleanName}`;
+  const stored = await uploadEvidenceFile({ category: "photos", path, file });
+  return stored.storagePath;
 }
 
 export async function uploadSignatureImage({
@@ -261,18 +257,14 @@ export async function uploadSignatureImage({
   const buffer = Buffer.from(match[1], "base64");
   const safeFieldKey = fieldKey.replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 80) || "signature";
   const path = `${userId}/${responseId}/signatures/${safeFieldKey}-${randomUUID()}.png`;
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.storage.from("survey-evidence").upload(path, buffer, {
-    contentType: "image/png",
-    upsert: false,
-  });
-  if (error) throw error;
+  const stored = await uploadEvidenceFile({ category: "signatures", path, file: buffer });
 
   return {
-    storagePath: path,
-    mimeType: "image/png",
-    fileSizeBytes: buffer.length,
-    sha256: createHash("sha256").update(buffer).digest("hex"),
+    storagePath: stored.storagePath,
+    mimeType: stored.mimeType,
+    fileSizeBytes: stored.fileSizeBytes,
+    sha256: stored.sha256,
+    provider: stored.provider,
   };
 }
 

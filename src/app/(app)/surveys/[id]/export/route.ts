@@ -3,8 +3,8 @@ import { jsPDF } from "jspdf";
 import type { SurveyPhoto } from "@/lib/types";
 import { requireProfile } from "@/modules/auth/services/auth.service";
 import { getSurveyResultData } from "@/modules/surveys/services/survey.service";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatDate, formatNumber } from "@/lib/utils";
+import { downloadEvidenceFile } from "@/modules/surveys/repositories/evidence-storage";
 
 const maxEmbeddedPhotoBytes = 8 * 1024 * 1024;
 type SignatureValue = { dataUrl: string; signedAt?: string };
@@ -245,14 +245,12 @@ async function getSignatureImageData(value: unknown): Promise<SignatureValue | n
   if (!parsed) return null;
   if ("dataUrl" in parsed) return parsed;
 
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.storage.from("survey-evidence").download(parsed.storagePath);
-  if (error || !data) return null;
+  const data = await downloadEvidenceFile(parsed.storagePath);
+  if (!data) return null;
   if (data.size > maxEmbeddedPhotoBytes) return null;
 
-  const buffer = Buffer.from(await data.arrayBuffer());
   return {
-    dataUrl: `data:${parsed.mimeType ?? "image/png"};base64,${buffer.toString("base64")}`,
+    dataUrl: `data:${parsed.mimeType ?? data.mimeType ?? "image/png"};base64,${data.buffer.toString("base64")}`,
     signedAt: parsed.signedAt,
   };
 }
@@ -289,15 +287,13 @@ async function getPhotoImageData(photo: SurveyPhoto): Promise<{ dataUrl: string;
   const format = getImageFormat(photo.mime_type, photo.file_name);
   if (!format) return null;
 
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.storage.from("survey-evidence").download(photo.storage_path);
-  if (error || !data) return null;
+  const data = await downloadEvidenceFile(photo.storage_path);
+  if (!data) return null;
   if (data.size > maxEmbeddedPhotoBytes) return null;
 
-  const buffer = Buffer.from(await data.arrayBuffer());
   const mimeType = photo.mime_type ?? mimeTypeForFormat(format);
   return {
-    dataUrl: `data:${mimeType};base64,${buffer.toString("base64")}`,
+    dataUrl: `data:${mimeType};base64,${data.buffer.toString("base64")}`,
     format,
   };
 }

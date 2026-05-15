@@ -2,9 +2,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatDate, formatNumber } from "@/lib/utils";
 import { loadSurveyResultController } from "@/modules/surveys/controllers/survey.controller";
+import { downloadEvidenceFile } from "@/modules/surveys/repositories/evidence-storage";
 
 type SignatureDisplayValue = { dataUrl: string; signedAt?: string };
 
@@ -146,12 +146,10 @@ async function getSignatureDisplayValue(value: unknown): Promise<SignatureDispla
   if (!parsed) return null;
   if ("dataUrl" in parsed) return parsed;
 
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.storage.from("survey-evidence").download(parsed.storagePath);
-  if (error || !data) return null;
-  const buffer = Buffer.from(await data.arrayBuffer());
+  const data = await downloadEvidenceFile(parsed.storagePath);
+  if (!data) return null;
   return {
-    dataUrl: `data:${parsed.mimeType ?? "image/png"};base64,${buffer.toString("base64")}`,
+    dataUrl: `data:${parsed.mimeType ?? data.mimeType ?? "image/png"};base64,${data.buffer.toString("base64")}`,
     signedAt: parsed.signedAt,
   };
 }
