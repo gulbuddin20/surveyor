@@ -129,6 +129,30 @@ export function TemplateEditor({ detail }: { detail: TemplateAdminDetail }) {
           <Badge className="bg-[color:rgba(22,37,29,0.08)] text-[var(--atlas-ink)]">{detail.responseFields.length} field tambahan</Badge>
           <Badge className="bg-[color:rgba(22,37,29,0.08)] text-[var(--atlas-ink)]">Denominator {Number(detail.denominator)}</Badge>
         </div>
+        <ActionForm
+          action={updateTemplateSettingsAction}
+          className="mt-5 grid gap-3 rounded-[1.5rem] border border-[color:rgba(22,37,29,0.1)] bg-[color:rgba(255,249,234,0.42)] p-3 sm:grid-cols-[minmax(0,240px)_1fr_auto]"
+          successMessage="Status template diperbarui."
+          errorMessage="Status gagal disimpan"
+          confirmTitle="Ubah status template?"
+          confirmDescription="Status menentukan apakah template muncul untuk surveyor. Draft dan Archived tidak muncul di Mulai Survei."
+        >
+          <input type="hidden" name="templateId" value={detail.id} />
+          <div className="space-y-2">
+            <Label>Status template</Label>
+            <select name="status" defaultValue={detail.status} className="atlas-select">
+              <option value="draft">Draft</option>
+              <option value="active">Active</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+          <p className="self-end pb-2 text-sm font-semibold leading-6 text-[color:rgba(22,37,29,0.58)]">
+            Active tampil untuk pengguna. Draft untuk persiapan. Archived untuk menyembunyikan template lama.
+          </p>
+          <Button type="submit" className="self-end">
+            Simpan status
+          </Button>
+        </ActionForm>
       </Card>
       <Card>
         <CardHeader>

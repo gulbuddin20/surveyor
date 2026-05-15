@@ -96,7 +96,8 @@ export async function removeTemplateFromForm(formData: FormData) {
 export async function updateTemplateSettingsFromForm(formData: FormData) {
   const parsed = templateSettingsSchema.safeParse({
     templateId: formData.get("templateId"),
-    photoMaxSizeMb: formData.get("photoMaxSizeMb"),
+    photoMaxSizeMb: formData.get("photoMaxSizeMb") || undefined,
+    status: formData.get("status") || undefined,
   });
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
   await updateTemplateSettings(parsed.data);

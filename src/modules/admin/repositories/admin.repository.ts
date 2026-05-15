@@ -23,6 +23,7 @@ import type {
   TemplateIdentityField,
   TemplateResponseField,
   TemplateAdminDetail,
+  TemplateStatus,
 } from "@/lib/types";
 
 function buildSectionTree(sections: SurveySection[], questions: SurveyQuestion[]): SectionWithQuestions[] {
@@ -224,10 +225,13 @@ export async function getTemplateAdminDetail(templateId: string): Promise<Templa
 
 export async function updateTemplateSettings(input: TemplateSettingsInput) {
   const supabase = await createSupabaseServerClient();
+  const payload: { photo_max_size_mb?: number; status?: TemplateStatus } = {};
+  if (input.photoMaxSizeMb !== undefined) payload.photo_max_size_mb = input.photoMaxSizeMb;
+  if (input.status !== undefined) payload.status = input.status;
   const { error } = await supabase
     .schema("surveyor")
     .from("survey_templates")
-    .update({ photo_max_size_mb: input.photoMaxSizeMb })
+    .update(payload)
     .eq("id", input.templateId);
   if (error) throw error;
 }

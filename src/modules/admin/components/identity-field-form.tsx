@@ -48,8 +48,8 @@ export function IdentityFieldForm({
         <input name="isActive" type="checkbox" defaultChecked={field?.is_active ?? true} />
         Aktif
       </label>
-      <div className="lg:col-span-2 lg:pt-6">
-        <Button type="submit" className="w-full">
+      <div className="flex justify-end lg:col-span-12">
+        <Button type="submit" className="w-full sm:w-auto sm:min-w-36">
           {field ? "Update" : "Tambah field"}
         </Button>
       </div>

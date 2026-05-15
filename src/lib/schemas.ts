@@ -95,7 +95,10 @@ export const formulaSchema = z.object({
 
 export const templateSettingsSchema = z.object({
   templateId: z.uuid(),
-  photoMaxSizeMb: z.coerce.number().int().min(1).max(25),
+  photoMaxSizeMb: z.coerce.number().int().min(1).max(25).optional(),
+  status: z.enum(["draft", "active", "archived"]).optional(),
+}).refine((value) => value.photoMaxSizeMb !== undefined || value.status !== undefined, {
+  message: "Tidak ada pengaturan yang diubah",
 });
 
 export const templateReorderSchema = z.object({
