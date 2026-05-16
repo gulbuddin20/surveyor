@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { requireProfile } from "@/modules/auth/services/auth.service";
 import { getTemplateDetail, uploadEvidencePhoto } from "@/modules/surveys/repositories/survey.repository";
+import { createUploadReceipt } from "@/modules/surveys/services/upload-receipt.service";
 
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const maxPhotoFilesPerField = 3;
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
     file,
     maxOutputBytes: safeTotalFiles === 1 ? singlePhotoTargetBytes : multiPhotoTargetBytes,
   });
+  const nowSeconds = Math.floor(Date.now() / 1000);
 
   return NextResponse.json({
     ok: true,
@@ -61,6 +63,21 @@ export async function POST(request: Request) {
       fileSizeBytes: stored.fileSizeBytes,
       sha256: stored.sha256,
       provider: stored.provider,
+      uploadReceipt: createUploadReceipt({
+        aud: "metadata-upload-receipt",
+        category: "photos",
+        exp: nowSeconds + 24 * 60 * 60,
+        fieldKey,
+        fileName: file.name,
+        fileSizeBytes: stored.fileSizeBytes,
+        iat: nowSeconds,
+        mimeType: stored.mimeType,
+        project: "surveyor",
+        sha256: stored.sha256,
+        storagePath: stored.storagePath,
+        sub: profile.id,
+        templateId,
+      }),
     },
   });
 }

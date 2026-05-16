@@ -16,24 +16,13 @@ import {
   uploadSignatureImage,
 } from "@/modules/surveys/repositories/survey.repository";
 import { calculateSurveyScore } from "@/modules/surveys/services/formula.service";
-
-const maxSignatureDataUrlBytes = 250000;
-const maxPhotoFilesPerField = 3;
-const singlePhotoTargetBytes = 1024 * 1024;
-const multiPhotoTargetBytes = 500 * 1024;
-type PendingSignature = {
-  fieldKey: string;
-  dataUrl: string;
-  signedAt: string;
-};
-type UploadedPhotoPayload = {
-  storagePath: string;
-  fileName: string;
-  mimeType: string;
-  fileSizeBytes: number;
-  sha256?: string;
-  provider?: string;
-};
+import { parseSignaturePayload, type PendingSignature } from "@/modules/surveys/services/survey-signature.service";
+import {
+  collectPhotoInputs,
+  multiPhotoTargetBytes,
+  singlePhotoTargetBytes,
+  validatePhotoInputs,
+} from "@/modules/surveys/services/survey-upload.service";
 
 export async function getSurveyStartData() {
   return { templates: await listActiveTemplates() };
@@ -149,36 +138,14 @@ export async function submitSurvey(profile: Profile, formData: FormData) {
     }
   }
 
-  const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-  const photoInputs = template.responseFields
-    .filter((field) => field.field_type === "photo")
-    .map((field) => {
-      const files = formData
-        .getAll(`responseFiles.${field.field_key}`)
-        .filter((value): value is File => value instanceof File && value.size > 0);
-      const uploaded = formData
-        .getAll(`uploadedPhotos.${field.field_key}`)
-        .map((value) => parseUploadedPhotoPayload(String(value)))
-        .filter((value): value is UploadedPhotoPayload => Boolean(value));
-      const maxSizeMb = typeof field.settings?.max_size_mb === "number"
-        ? field.settings.max_size_mb
-        : Number(template.photo_max_size_mb);
-      return { field, files, uploaded, maxSizeMb };
-    });
-
-  for (const input of photoInputs) {
-    if (input.files.length + input.uploaded.length > maxPhotoFilesPerField) {
-      return { ok: false, message: `${input.field.label} maksimal ${maxPhotoFilesPerField} foto` };
-    }
-    if (input.field.is_required && !responseId && input.files.length === 0 && input.uploaded.length === 0) {
-      return { ok: false, message: `${input.field.label} wajib diunggah` };
-    }
-    const maxBytes = input.maxSizeMb * 1024 * 1024;
-    for (const file of input.files) {
-      if (!allowedTypes.has(file.type)) return { ok: false, message: `${input.field.label} harus JPG, PNG, atau WebP` };
-      if (file.size > maxBytes) return { ok: false, message: `Ukuran ${input.field.label} maksimal ${input.maxSizeMb} MB` };
-    }
-  }
+  const photoInputs = collectPhotoInputs(template, formData);
+  const photoValidation = validatePhotoInputs({
+    inputs: photoInputs,
+    isNewResponse: !responseId,
+    profile,
+    template,
+  });
+  if (!photoValidation.ok) return photoValidation;
 
   const questions = flattenQuestions(template.sections);
   const byId = new Map<string, SurveyQuestion>(questions.map((question) => [question.id, question]));
@@ -338,66 +305,6 @@ function flattenQuestions(sections: SectionWithQuestions[]): SurveyQuestion[] {
   ]);
 }
 
-function parseSignaturePayload(value: string): { dataUrl: string; signedAt: string } | { storagePath: string; signedAt?: string; sha256?: string; mimeType?: string; fileSizeBytes?: number } | null {
-  if (value.length > maxSignatureDataUrlBytes) return null;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch {
-    return null;
-  }
-  if (!parsed || typeof parsed !== "object") return null;
-  const storagePath = "storagePath" in parsed ? parsed.storagePath : null;
-  if (typeof storagePath === "string" && storagePath.trim()) {
-    const signedAt = "signedAt" in parsed ? parsed.signedAt : null;
-    const sha256 = "sha256" in parsed ? parsed.sha256 : null;
-    const mimeType = "mimeType" in parsed ? parsed.mimeType : null;
-    const fileSizeBytes = "fileSizeBytes" in parsed ? parsed.fileSizeBytes : null;
-    return {
-      storagePath,
-      signedAt: typeof signedAt === "string" ? signedAt : undefined,
-      sha256: typeof sha256 === "string" ? sha256 : undefined,
-      mimeType: typeof mimeType === "string" ? mimeType : undefined,
-      fileSizeBytes: typeof fileSizeBytes === "number" ? fileSizeBytes : undefined,
-    };
-  }
-  const dataUrl = "dataUrl" in parsed ? parsed.dataUrl : null;
-  const signedAt = "signedAt" in parsed ? parsed.signedAt : null;
-  if (typeof dataUrl !== "string") return null;
-  if (!dataUrl.startsWith("data:image/png;base64,")) return null;
-  if (dataUrl.length > maxSignatureDataUrlBytes) return null;
-  return {
-    dataUrl,
-    signedAt: typeof signedAt === "string" ? signedAt : new Date().toISOString(),
-  };
-}
-
 function getTextResponseValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value : null;
-}
-
-function parseUploadedPhotoPayload(value: string): UploadedPhotoPayload | null {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch {
-    return null;
-  }
-  if (!parsed || typeof parsed !== "object") return null;
-  const storagePath = "storagePath" in parsed ? parsed.storagePath : null;
-  const fileName = "fileName" in parsed ? parsed.fileName : null;
-  const mimeType = "mimeType" in parsed ? parsed.mimeType : null;
-  const fileSizeBytes = "fileSizeBytes" in parsed ? parsed.fileSizeBytes : null;
-  if (typeof storagePath !== "string" || !storagePath.trim()) return null;
-  if (typeof fileName !== "string" || !fileName.trim()) return null;
-  if (typeof mimeType !== "string" || !mimeType.trim()) return null;
-  if (typeof fileSizeBytes !== "number" || !Number.isFinite(fileSizeBytes)) return null;
-  return {
-    storagePath,
-    fileName,
-    mimeType,
-    fileSizeBytes,
-    sha256: "sha256" in parsed && typeof parsed.sha256 === "string" ? parsed.sha256 : undefined,
-    provider: "provider" in parsed && typeof parsed.provider === "string" ? parsed.provider : undefined,
-  };
 }

@@ -28,6 +28,7 @@ type UploadedPhotoPayload = {
   fileSizeBytes: number;
   sha256: string;
   provider: string;
+  uploadReceipt?: string;
 };
 
 type PreviewItem = {

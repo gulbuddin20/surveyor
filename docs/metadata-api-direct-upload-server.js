@@ -24,7 +24,7 @@ const allowedUploadOrigins = (process.env.METADATA_UPLOAD_ALLOWED_ORIGINS || "")
   .filter(Boolean);
 
 app.use(helmet());
-app.use(express.json({ limit: "64kb" }));
+app.use(express.json({ limit: "2mb" }));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
@@ -52,6 +52,44 @@ app.get("/files/:project/*path", requireKey, async (req, res, next) => {
     const filePath = Array.isArray(req.params.path) ? req.params.path.join("/") : req.params.path;
     const fullPath = resolveSafePath(root, project, filePath);
     return res.sendFile(fullPath);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+app.post("/maintenance/orphan-uploads/:project/:category", requireKey, async (req, res, next) => {
+  try {
+    const project = safeSegment(req.params.project);
+    const category = safeSegment(req.params.category);
+    const knownPaths = new Set(Array.isArray(req.body?.knownPaths) ? req.body.knownPaths.filter((item) => typeof item === "string") : []);
+    const olderThanHours = Math.max(1, Math.min(720, Number(req.body?.olderThanHours || 24)));
+    const dryRun = req.body?.dryRun !== false;
+    const cutoffMs = Date.now() - olderThanHours * 60 * 60 * 1000;
+    const directory = resolveSafePath(root, project, category);
+    const entries = await fs.readdir(directory, { withFileTypes: true }).catch((error) => {
+      if (error.code === "ENOENT") return [];
+      throw error;
+    });
+    const orphanPaths = [];
+
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      const relativePath = `${project}/${category}/${entry.name}`;
+      if (knownPaths.has(relativePath)) continue;
+      const fullPath = resolveSafePath(directory, entry.name);
+      const stat = await fs.stat(fullPath);
+      if (stat.mtimeMs > cutoffMs) continue;
+      orphanPaths.push(relativePath);
+      if (!dryRun) await fs.unlink(fullPath);
+    }
+
+    return res.json({
+      ok: true,
+      deleted: dryRun ? 0 : orphanPaths.length,
+      dryRun,
+      olderThanHours,
+      orphanPaths,
+    });
   } catch (error) {
     return next(error);
   }
@@ -110,6 +148,21 @@ app.post("/direct/:project/:category", corsUpload, markRequestStart, upload.sing
         provider: "metadata-api-direct",
         sha256: stored.sha256,
         storagePath: stored.path,
+        uploadReceipt: signUploadReceipt({
+          aud: "metadata-upload-receipt",
+          category,
+          exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
+          fieldKey: payload.fieldKey,
+          fileName: payload.fileName || req.file.originalname,
+          fileSizeBytes: stored.fileSizeBytes,
+          iat: Math.floor(Date.now() / 1000),
+          mimeType: stored.mimeType,
+          project,
+          sha256: stored.sha256,
+          storagePath: stored.path,
+          sub: payload.sub,
+          templateId: payload.templateId,
+        }),
       },
     });
   } catch (error) {
@@ -238,6 +291,12 @@ function verifyUploadToken(token) {
     throw httpError(400, "Invalid upload limits");
   }
   return payload;
+}
+
+function signUploadReceipt(payload) {
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = crypto.createHmac("sha256", uploadTokenSecret).update(encodedPayload).digest("base64url");
+  return `${encodedPayload}.${signature}`;
 }
 
 function resolveSafePath(base, ...parts) {

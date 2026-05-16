@@ -325,7 +325,7 @@ export async function reorderIdentityFields(input: TemplateReorderInput) {
 
   assertExactReorderScope(input.orderedIds, (data ?? []).map((item) => item.id));
 
-  await Promise.all(input.orderedIds.map(async (id, index) => {
+  for (const [index, id] of input.orderedIds.entries()) {
     const { error: updateError } = await supabase
       .schema("surveyor")
       .from("template_identity_fields")
@@ -333,7 +333,7 @@ export async function reorderIdentityFields(input: TemplateReorderInput) {
       .eq("id", id)
       .eq("template_id", input.templateId);
     if (updateError) throw updateError;
-  }));
+  }
 }
 
 export async function reorderResponseFields(input: TemplateReorderInput) {
@@ -348,7 +348,7 @@ export async function reorderResponseFields(input: TemplateReorderInput) {
 
   assertExactReorderScope(input.orderedIds, (data ?? []).map((item) => item.id));
 
-  await Promise.all(input.orderedIds.map(async (id, index) => {
+  for (const [index, id] of input.orderedIds.entries()) {
     const { error: updateError } = await supabase
       .schema("surveyor")
       .from("template_response_fields")
@@ -356,7 +356,7 @@ export async function reorderResponseFields(input: TemplateReorderInput) {
       .eq("id", id)
       .eq("template_id", input.templateId);
     if (updateError) throw updateError;
-  }));
+  }
 }
 
 export async function upsertSection(input: SectionInput) {
@@ -411,7 +411,7 @@ export async function reorderSections(input: TemplateReorderInput) {
 
   assertExactReorderScope(input.orderedIds, (data ?? []).map((item) => item.id));
 
-  await Promise.all(input.orderedIds.map(async (id, index) => {
+  for (const [index, id] of input.orderedIds.entries()) {
     const { error: updateError } = await supabase
       .schema("surveyor")
       .from("survey_sections")
@@ -419,7 +419,7 @@ export async function reorderSections(input: TemplateReorderInput) {
       .eq("id", id)
       .eq("template_id", input.templateId);
     if (updateError) throw updateError;
-  }));
+  }
 }
 
 function assertNoSectionCycles(
@@ -480,18 +480,20 @@ export async function reorderSectionsAcrossParents(input: SectionParentOrdersInp
   });
   assertNoSectionCycles(currentParentBySectionId, nextParentBySectionId);
 
-  await Promise.all(input.sections.flatMap((section) => section.orderedIds.map(async (id, index) => {
-    const { error: updateError } = await supabase
-      .schema("surveyor")
-      .from("survey_sections")
-      .update({
-        parent_id: section.parentId,
-        sort_order: sortOrderForIndex(index),
-      })
-      .eq("id", id)
-      .eq("template_id", input.templateId);
-    if (updateError) throw updateError;
-  })));
+  for (const section of input.sections) {
+    for (const [index, id] of section.orderedIds.entries()) {
+      const { error: updateError } = await supabase
+        .schema("surveyor")
+        .from("survey_sections")
+        .update({
+          parent_id: section.parentId,
+          sort_order: sortOrderForIndex(index),
+        })
+        .eq("id", id)
+        .eq("template_id", input.templateId);
+      if (updateError) throw updateError;
+    }
+  }
 }
 
 export async function upsertQuestion(input: QuestionInput) {
@@ -571,7 +573,7 @@ export async function reorderQuestions(input: TemplateReorderInput) {
 
   assertExactReorderScope(input.orderedIds, (data ?? []).map((item) => item.id));
 
-  await Promise.all(input.orderedIds.map(async (id, index) => {
+  for (const [index, id] of input.orderedIds.entries()) {
     const { error: updateError } = await supabase
       .schema("surveyor")
       .from("survey_questions")
@@ -579,7 +581,7 @@ export async function reorderQuestions(input: TemplateReorderInput) {
       .eq("id", id)
       .eq("template_id", input.templateId);
     if (updateError) throw updateError;
-  }));
+  }
 }
 
 export async function reorderQuestionsAcrossSections(input: QuestionSectionOrdersInput) {
@@ -621,16 +623,18 @@ export async function reorderQuestionsAcrossSections(input: QuestionSectionOrder
 
   assertExactReorderScope(orderedIds, (questions ?? []).map((question) => question.id));
 
-  await Promise.all(input.sections.flatMap((section) => section.orderedIds.map(async (id, index) => {
-    const { error: updateError } = await supabase
-      .schema("surveyor")
-      .from("survey_questions")
-      .update({
-        section_id: section.sectionId,
-        sort_order: sortOrderForIndex(index),
-      })
-      .eq("id", id)
-      .eq("template_id", input.templateId);
-    if (updateError) throw updateError;
-  })));
+  for (const section of input.sections) {
+    for (const [index, id] of section.orderedIds.entries()) {
+      const { error: updateError } = await supabase
+        .schema("surveyor")
+        .from("survey_questions")
+        .update({
+          section_id: section.sectionId,
+          sort_order: sortOrderForIndex(index),
+        })
+        .eq("id", id)
+        .eq("template_id", input.templateId);
+      if (updateError) throw updateError;
+    }
+  }
 }
