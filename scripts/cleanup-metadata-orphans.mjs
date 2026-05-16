@@ -2,6 +2,8 @@ import { createClient } from "@supabase/supabase-js";
 
 const metadataUrl = requiredEnv("METADATA_API_URL").replace(/\/+$/, "");
 const metadataKey = requiredEnv("METADATA_API_KEY");
+const cfAccessClientId = process.env.METADATA_CF_ACCESS_CLIENT_ID;
+const cfAccessClientSecret = process.env.METADATA_CF_ACCESS_CLIENT_SECRET;
 const supabaseUrl = requiredEnv("NEXT_PUBLIC_SUPABASE_URL");
 const supabaseSecretKey = requiredEnv("SUPABASE_SECRET_KEY");
 const project = process.env.METADATA_CLEANUP_PROJECT || "surveyor";
@@ -22,10 +24,7 @@ const supabase = createClient(supabaseUrl, supabaseSecretKey, {
 const knownPaths = await loadKnownPhotoPaths();
 const response = await fetch(`${metadataUrl}/maintenance/orphan-uploads/${project}/${category}`, {
   method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "x-metadata-key": metadataKey,
-  },
+  headers: buildMetadataHeaders(),
   body: JSON.stringify({
     dryRun,
     knownPaths,
@@ -77,6 +76,20 @@ function requiredEnv(key) {
     process.exit(1);
   }
   return value;
+}
+
+function buildMetadataHeaders() {
+  const headers = {
+    "Content-Type": "application/json",
+    "x-metadata-key": metadataKey,
+  };
+
+  if (cfAccessClientId && cfAccessClientSecret) {
+    headers["CF-Access-Client-Id"] = cfAccessClientId;
+    headers["CF-Access-Client-Secret"] = cfAccessClientSecret;
+  }
+
+  return headers;
 }
 
 function parseJson(value) {
