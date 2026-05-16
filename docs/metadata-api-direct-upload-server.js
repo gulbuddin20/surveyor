@@ -177,6 +177,7 @@ async function storeBuffer({ category, buffer, maxOutputBytes, mimeType, origina
     sha256,
     timings: {
       compressMs,
+      compressSkipped: Boolean(normalized.skipped),
       hashMs: elapsedMs(hashStartedAt, hrtimeNow()),
       mkdirMs: elapsedMs(mkdirStartedAt, writeStartedAt),
       storeMs: elapsedMs(storeStartedAt, hrtimeNow()),
@@ -186,6 +187,10 @@ async function storeBuffer({ category, buffer, maxOutputBytes, mimeType, origina
 }
 
 async function compressPhoto(input, maxOutputBytes) {
+  if (input.length <= maxOutputBytes && isJpeg(input)) {
+    return { buffer: input, mimeType: "image/jpeg", skipped: true };
+  }
+
   let quality = 82;
   let width;
   const metadata = await sharp(input).metadata();
@@ -210,6 +215,10 @@ async function compressPhoto(input, maxOutputBytes) {
     .jpeg({ quality: 42, mozjpeg: true })
     .toBuffer();
   return { buffer: output, mimeType: "image/jpeg" };
+}
+
+function isJpeg(input) {
+  return input.length > 3 && input[0] === 0xff && input[1] === 0xd8 && input[2] === 0xff;
 }
 
 function verifyUploadToken(token) {
@@ -294,10 +303,17 @@ function logUploadTiming({
     project,
     receive_ms: Math.round(receiveMs),
     total_ms: Math.round(totalMs),
-    ...Object.fromEntries(Object.entries(timings || {}).map(([key, value]) => [camelToSnake(key), Math.round(value)])),
+    ...formatTimings(timings),
   }));
 }
 
 function camelToSnake(value) {
   return value.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+}
+
+function formatTimings(timings) {
+  return Object.fromEntries(Object.entries(timings || {}).map(([key, value]) => [
+    camelToSnake(key),
+    typeof value === "number" ? Math.round(value) : value,
+  ]));
 }
