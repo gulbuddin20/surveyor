@@ -3,6 +3,7 @@ stages:
   - migrate
   - build
   - deploy
+  - cleanup
 
 variables:
   DOCKER_BUILDKIT: "1"
@@ -22,6 +23,7 @@ lint:
   script:
     - npm ci --ignore-scripts
     - npm run lint
+    - npm run metadata-api:check
 
 docker_build:
   stage: validate
@@ -273,3 +275,40 @@ deploy_prod:
       fi
 
       echo "Dokploy deploy triggered for $TARGET_IMAGE"
+
+.cleanup_metadata_template:
+  stage: cleanup
+  image: node:20-alpine
+  tags:
+    - ibm
+  script:
+    - npm ci --ignore-scripts
+    - ': "${NEXT_PUBLIC_SUPABASE_URL:?NEXT_PUBLIC_SUPABASE_URL is required}"'
+    - ': "${SUPABASE_SECRET_KEY:?SUPABASE_SECRET_KEY is required}"'
+    - ': "${METADATA_API_URL:?METADATA_API_URL is required}"'
+    - ': "${METADATA_API_KEY:?METADATA_API_KEY is required}"'
+    - METADATA_CLEANUP_DRY_RUN=false npm run metadata:cleanup-orphans
+
+cleanup_dev_metadata_orphans:
+  extends: .cleanup_metadata_template
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == "develop"'
+  environment:
+    name: dev
+  variables:
+    NEXT_PUBLIC_SUPABASE_URL: "$DEV_SUPABASE_URL"
+    SUPABASE_SECRET_KEY: "$DEV_SUPABASE_SERVICE_ROLE_KEY"
+    METADATA_API_URL: "$DEV_METADATA_API_URL"
+    METADATA_API_KEY: "$DEV_METADATA_API_KEY"
+
+cleanup_prod_metadata_orphans:
+  extends: .cleanup_metadata_template
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == "master"'
+  environment:
+    name: production
+  variables:
+    NEXT_PUBLIC_SUPABASE_URL: "$PROD_SUPABASE_URL"
+    SUPABASE_SECRET_KEY: "$PROD_SUPABASE_SERVICE_ROLE_KEY"
+    METADATA_API_URL: "$PROD_METADATA_API_URL"
+    METADATA_API_KEY: "$PROD_METADATA_API_KEY"

@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
+    "metadata-api:check": "node --check metadata-api/server.js && cmp -s metadata-api/server.js docs/metadata-api-direct-upload-server.js",
     "metadata:cleanup-orphans": "node scripts/cleanup-metadata-orphans.mjs",
     "lint": "eslint"
   },
