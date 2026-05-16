@@ -58,7 +58,8 @@ app.get("/files/:project/*path", requireKey, async (req, res, next) => {
 });
 
 app.options("/direct/:project/:category", corsUpload, (_req, res) => res.status(204).end());
-app.post("/direct/:project/:category", corsUpload, upload.single("file"), async (req, res, next) => {
+app.post("/direct/:project/:category", corsUpload, markRequestStart, upload.single("file"), async (req, res, next) => {
+  const handlerStartedAt = hrtimeNow();
   try {
     if (!uploadTokenSecret) return res.status(503).json({ ok: false, message: "Direct upload disabled" });
     if (!req.file) return res.status(400).json({ ok: false, message: "Missing file" });
@@ -85,6 +86,19 @@ app.post("/direct/:project/:category", corsUpload, upload.single("file"), async 
       mimeType: req.file.mimetype,
       originalName: req.file.originalname || payload.fileName || "upload",
       project,
+    });
+
+    logUploadTiming({
+      category,
+      fieldKey: payload.fieldKey,
+      fileName: payload.fileName || req.file.originalname,
+      inputBytes: req.file.size,
+      maxOutputBytes: payload.maxOutputBytes,
+      outputBytes: stored.fileSizeBytes,
+      project,
+      receiveMs: elapsedMs(req.uploadStartedAt, handlerStartedAt),
+      timings: stored.timings,
+      totalMs: elapsedMs(req.uploadStartedAt, hrtimeNow()),
     });
 
     return res.json({
@@ -131,22 +145,43 @@ function corsUpload(req, res, next) {
   return next();
 }
 
+function markRequestStart(req, _res, next) {
+  req.uploadStartedAt = hrtimeNow();
+  return next();
+}
+
 async function storeBuffer({ category, buffer, maxOutputBytes, mimeType, originalName, project }) {
+  const storeStartedAt = hrtimeNow();
+  let compressMs = 0;
   const normalized = category === "photos"
-    ? await compressPhoto(buffer, maxOutputBytes || 1024 * 1024)
+    ? await compressPhoto(buffer, maxOutputBytes || 1024 * 1024).then((result) => {
+        compressMs = elapsedMs(storeStartedAt, hrtimeNow());
+        return result;
+      })
     : { buffer, mimeType };
   const safeName = sanitizeName(originalName).replace(/\.[^.]+$/, "") || "file";
   const extension = extensionForMime(normalized.mimeType);
   const fileName = `${Date.now()}-${crypto.randomUUID()}-${safeName}${extension}`;
   const directory = resolveSafePath(root, project, category);
+  const mkdirStartedAt = hrtimeNow();
   await fs.mkdir(directory, { recursive: true });
   const fullPath = resolveSafePath(root, project, category, fileName);
+  const writeStartedAt = hrtimeNow();
   await fs.writeFile(fullPath, normalized.buffer, { mode: 0o640 });
+  const hashStartedAt = hrtimeNow();
+  const sha256 = crypto.createHash("sha256").update(normalized.buffer).digest("hex");
   return {
     fileSizeBytes: normalized.buffer.length,
     mimeType: normalized.mimeType,
     path: `${project}/${category}/${fileName}`,
-    sha256: crypto.createHash("sha256").update(normalized.buffer).digest("hex"),
+    sha256,
+    timings: {
+      compressMs,
+      hashMs: elapsedMs(hashStartedAt, hrtimeNow()),
+      mkdirMs: elapsedMs(mkdirStartedAt, writeStartedAt),
+      storeMs: elapsedMs(storeStartedAt, hrtimeNow()),
+      writeMs: elapsedMs(writeStartedAt, hashStartedAt),
+    },
   };
 }
 
@@ -225,4 +260,44 @@ function httpError(status, message) {
   const error = new Error(message);
   error.status = status;
   return error;
+}
+
+function hrtimeNow() {
+  return process.hrtime.bigint();
+}
+
+function elapsedMs(start, end) {
+  if (!start || !end) return 0;
+  return Number(end - start) / 1_000_000;
+}
+
+function logUploadTiming({
+  category,
+  fieldKey,
+  fileName,
+  inputBytes,
+  maxOutputBytes,
+  outputBytes,
+  project,
+  receiveMs,
+  timings,
+  totalMs,
+}) {
+  console.info("[METADATA_UPLOAD_TIMING]", JSON.stringify({
+    category,
+    compression_ratio: inputBytes > 0 ? Number((outputBytes / inputBytes).toFixed(3)) : null,
+    field_key: fieldKey,
+    file_name: fileName,
+    input_bytes: inputBytes,
+    max_output_bytes: maxOutputBytes,
+    output_bytes: outputBytes,
+    project,
+    receive_ms: Math.round(receiveMs),
+    total_ms: Math.round(totalMs),
+    ...Object.fromEntries(Object.entries(timings || {}).map(([key, value]) => [camelToSnake(key), Math.round(value)])),
+  }));
+}
+
+function camelToSnake(value) {
+  return value.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 }
