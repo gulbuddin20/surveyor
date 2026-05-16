@@ -125,23 +125,10 @@ export function PhotoUploadField({
   async function uploadFiles(nextItems: PreviewItem[]) {
     await Promise.all(nextItems.map(async (item) => {
       try {
-        const formData = new FormData();
-        formData.set("templateId", templateId);
-        formData.set("fieldKey", fieldKey);
-        formData.set("totalFiles", String(nextItems.length));
-        formData.set("file", item.file);
-
-        const response = await fetch("/surveys/uploads", {
-          method: "POST",
-          body: formData,
-        });
-        const payload = await response.json().catch(() => null) as { ok?: boolean; file?: UploadedPhotoPayload; message?: string } | null;
-        if (!response.ok || !payload?.ok || !payload.file) {
-          throw new Error(payload?.message ?? "Upload gagal");
-        }
+        const payload = await uploadPhoto(item.file, nextItems.length);
         setItems((current) => current.map((currentItem) => (
           currentItem.id === item.id
-            ? { ...currentItem, status: "uploaded", message: "Foto siap disimpan", uploaded: payload.file }
+            ? { ...currentItem, status: "uploaded", message: "Foto siap disimpan", uploaded: payload }
             : currentItem
         )));
       } catch (caught) {
@@ -152,6 +139,65 @@ export function PhotoUploadField({
         )));
       }
     }));
+  }
+
+  async function uploadPhoto(file: File, totalFiles: number) {
+    const directPayload = await uploadPhotoDirect(file, totalFiles).catch(() => null);
+    if (directPayload) return directPayload;
+    return uploadPhotoViaSurveyor(file, totalFiles);
+  }
+
+  async function uploadPhotoDirect(file: File, totalFiles: number) {
+    const tokenResponse = await fetch("/surveys/uploads/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fieldKey,
+        fileName: file.name,
+        fileSizeBytes: file.size,
+        mimeType: file.type,
+        templateId,
+        totalFiles,
+      }),
+    });
+    if (tokenResponse.status === 501) return null;
+    const tokenPayload = await tokenResponse.json().catch(() => null) as { ok?: boolean; uploadUrl?: string; token?: string; message?: string } | null;
+    if (!tokenResponse.ok || !tokenPayload?.ok || !tokenPayload.uploadUrl || !tokenPayload.token) {
+      throw new Error(tokenPayload?.message ?? "Token upload gagal");
+    }
+
+    const formData = new FormData();
+    formData.set("file", file);
+    const uploadResponse = await fetch(tokenPayload.uploadUrl, {
+      method: "POST",
+      headers: {
+        "x-upload-token": tokenPayload.token,
+      },
+      body: formData,
+    });
+    const uploadPayload = await uploadResponse.json().catch(() => null) as { ok?: boolean; file?: UploadedPhotoPayload; message?: string } | null;
+    if (!uploadResponse.ok || !uploadPayload?.ok || !uploadPayload.file) {
+      throw new Error(uploadPayload?.message ?? "Upload langsung gagal");
+    }
+    return uploadPayload.file;
+  }
+
+  async function uploadPhotoViaSurveyor(file: File, totalFiles: number) {
+    const formData = new FormData();
+    formData.set("templateId", templateId);
+    formData.set("fieldKey", fieldKey);
+    formData.set("totalFiles", String(totalFiles));
+    formData.set("file", file);
+
+    const response = await fetch("/surveys/uploads", {
+      method: "POST",
+      body: formData,
+    });
+    const payload = await response.json().catch(() => null) as { ok?: boolean; file?: UploadedPhotoPayload; message?: string } | null;
+    if (!response.ok || !payload?.ok || !payload.file) {
+      throw new Error(payload?.message ?? "Upload gagal");
+    }
+    return payload.file;
   }
 
   function removeItem(id: string) {

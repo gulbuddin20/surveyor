@@ -8,6 +8,8 @@ const envSchema = z.object({
   METADATA_API_KEY: z.string().optional(),
   METADATA_CF_ACCESS_CLIENT_ID: z.string().optional(),
   METADATA_CF_ACCESS_CLIENT_SECRET: z.string().optional(),
+  METADATA_UPLOAD_URL: z.url().optional(),
+  METADATA_UPLOAD_TOKEN_SECRET: z.string().optional(),
 });
 
 export const env = envSchema.parse({
@@ -19,4 +21,6 @@ export const env = envSchema.parse({
   METADATA_API_KEY: process.env.METADATA_API_KEY,
   METADATA_CF_ACCESS_CLIENT_ID: process.env.METADATA_CF_ACCESS_CLIENT_ID,
   METADATA_CF_ACCESS_CLIENT_SECRET: process.env.METADATA_CF_ACCESS_CLIENT_SECRET,
+  METADATA_UPLOAD_URL: process.env.METADATA_UPLOAD_URL,
+  METADATA_UPLOAD_TOKEN_SECRET: process.env.METADATA_UPLOAD_TOKEN_SECRET,
 });
