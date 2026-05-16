@@ -27,9 +27,7 @@ type MetadataUploadResponse = {
 export function isMetadataApiConfigured() {
   return Boolean(
     env.METADATA_API_URL
-      && env.METADATA_API_KEY
-      && env.METADATA_CF_ACCESS_CLIENT_ID
-      && env.METADATA_CF_ACCESS_CLIENT_SECRET,
+      && env.METADATA_API_KEY,
   );
 }
 
@@ -134,14 +132,17 @@ function metadataBaseUrl() {
 }
 
 function metadataHeaders() {
-  if (!env.METADATA_API_KEY || !env.METADATA_CF_ACCESS_CLIENT_ID || !env.METADATA_CF_ACCESS_CLIENT_SECRET) {
-    throw new Error("Metadata API credentials belum lengkap");
+  if (!env.METADATA_API_KEY) {
+    throw new Error("Metadata API key belum dikonfigurasi");
   }
-  return {
+  const headers: Record<string, string> = {
     "x-metadata-key": env.METADATA_API_KEY,
-    "CF-Access-Client-Id": env.METADATA_CF_ACCESS_CLIENT_ID,
-    "CF-Access-Client-Secret": env.METADATA_CF_ACCESS_CLIENT_SECRET,
   };
+  if (env.METADATA_CF_ACCESS_CLIENT_ID && env.METADATA_CF_ACCESS_CLIENT_SECRET) {
+    headers["CF-Access-Client-Id"] = env.METADATA_CF_ACCESS_CLIENT_ID;
+    headers["CF-Access-Client-Secret"] = env.METADATA_CF_ACCESS_CLIENT_SECRET;
+  }
+  return headers;
 }
 
 function encodePath(path: string) {
