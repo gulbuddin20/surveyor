@@ -33,9 +33,15 @@ const response = await fetch(`${metadataUrl}/maintenance/orphan-uploads/${projec
   }),
 });
 
-const payload = await response.json().catch(() => null);
+const responseText = await response.text();
+const payload = parseJson(responseText);
 if (!response.ok || !payload?.ok) {
-  console.error(payload ?? await response.text().catch(() => "Cleanup failed"));
+  console.error(JSON.stringify({
+    ok: false,
+    status: response.status,
+    statusText: response.statusText,
+    response: payload ?? responseText.slice(0, 1000),
+  }, null, 2));
   process.exit(1);
 }
 
@@ -71,4 +77,12 @@ function requiredEnv(key) {
     process.exit(1);
   }
   return value;
+}
+
+function parseJson(value) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
 }
