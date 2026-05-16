@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 const maxPhotoCount = 3;
+const clientResizeMaxDimension = 1600;
+const clientResizeQuality = 0.82;
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export type ExistingPhotoPreview = {
@@ -125,7 +127,18 @@ export function PhotoUploadField({
   async function uploadFiles(nextItems: PreviewItem[]) {
     await Promise.all(nextItems.map(async (item) => {
       try {
-        const payload = await uploadPhoto(item.file, nextItems.length);
+        setItems((current) => current.map((currentItem) => (
+          currentItem.id === item.id
+            ? { ...currentItem, message: "Menyiapkan foto..." }
+            : currentItem
+        )));
+        const uploadFile = await preparePhotoForUpload(item.file);
+        setItems((current) => current.map((currentItem) => (
+          currentItem.id === item.id
+            ? { ...currentItem, message: "Mengunggah dan mengompres..." }
+            : currentItem
+        )));
+        const payload = await uploadPhoto(uploadFile, nextItems.length);
         setItems((current) => current.map((currentItem) => (
           currentItem.id === item.id
             ? { ...currentItem, status: "uploaded", message: "Foto siap disimpan", uploaded: payload }
@@ -360,4 +373,57 @@ function StatusLine({ status, message }: { status: "stored" | "uploading" | "upl
 function formatFileSize(size: number) {
   if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`;
   return `${Math.max(1, Math.round(size / 1024))} KB`;
+}
+
+async function preparePhotoForUpload(file: File) {
+  if (!acceptedTypes.has(file.type)) return file;
+  if (file.size <= 900 * 1024) return file;
+
+  const image = await loadImage(file);
+  const longestSide = Math.max(image.naturalWidth, image.naturalHeight);
+  if (!longestSide || longestSide <= clientResizeMaxDimension) return file;
+
+  const scale = clientResizeMaxDimension / longestSide;
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (!context) return file;
+
+  context.fillStyle = "#fff";
+  context.fillRect(0, 0, width, height);
+  context.drawImage(image, 0, 0, width, height);
+
+  const blob = await canvasToBlob(canvas, "image/jpeg", clientResizeQuality);
+  if (!blob || blob.size >= file.size) return file;
+
+  const safeName = file.name.replace(/\.[^.]+$/, "") || "photo";
+  return new File([blob], `${safeName}.jpg`, {
+    lastModified: file.lastModified,
+    type: "image/jpeg",
+  });
+}
+
+function loadImage(file: File) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Foto tidak dapat diproses"));
+    };
+    image.src = url;
+  });
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
+  return new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, type, quality);
+  });
 }
