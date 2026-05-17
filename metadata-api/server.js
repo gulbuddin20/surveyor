@@ -16,6 +16,7 @@ const upload = multer({
 
 const port = Number(process.env.PORT || 19090);
 const root = process.env.METADATA_ROOT || "/data/metadata";
+const archiveRoot = process.env.METADATA_ARCHIVE_ROOT || "/mnt/archive/metadata-archive";
 const apiKey = process.env.METADATA_API_KEY || "";
 const uploadTokenSecret = process.env.METADATA_UPLOAD_TOKEN_SECRET || "";
 const allowedUploadOrigins = (process.env.METADATA_UPLOAD_ALLOWED_ORIGINS || "")
@@ -50,7 +51,7 @@ app.get("/files/:project/*path", requireKey, async (req, res, next) => {
   try {
     const project = safeSegment(req.params.project);
     const filePath = Array.isArray(req.params.path) ? req.params.path.join("/") : req.params.path;
-    const fullPath = resolveSafePath(root, project, filePath);
+    const fullPath = await resolveReadableFile(project, filePath);
     return res.sendFile(fullPath);
   } catch (error) {
     return next(error);
@@ -306,6 +307,28 @@ function resolveSafePath(base, ...parts) {
     throw httpError(400, "Invalid path");
   }
   return resolved;
+}
+
+async function resolveReadableFile(project, filePath) {
+  const livePath = resolveSafePath(root, project, filePath);
+  if (await isReadableFile(livePath)) return livePath;
+
+  if (archiveRoot) {
+    const archivedPath = resolveSafePath(archiveRoot, project, filePath);
+    if (await isReadableFile(archivedPath)) return archivedPath;
+  }
+
+  throw httpError(404, "File not found");
+}
+
+async function isReadableFile(filePath) {
+  try {
+    const stat = await fs.stat(filePath);
+    return stat.isFile();
+  } catch (error) {
+    if (error && error.code === "ENOENT") return false;
+    throw error;
+  }
 }
 
 function safeSegment(value) {

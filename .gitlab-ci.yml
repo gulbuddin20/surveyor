@@ -2,6 +2,7 @@ stages:
   - validate
   - migrate
   - build
+  - metadata
   - deploy
   - cleanup
 
@@ -51,7 +52,7 @@ docker_build:
   tags:
     - ibm
   needs:
-    - lint
+    - build_prod_image
     - docker_build
   variables:
     MIGRATION_TABLE: "public.surveyor_schema_migrations"
@@ -146,6 +147,33 @@ build_prod_image:
   after_script:
     - docker logout || true
 
+deploy_metadata_api_prod:
+  stage: metadata
+  image: alpine:3.22
+  tags:
+    - ibm
+  needs:
+    - lint
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "master"'
+  environment:
+    name: production
+  before_script:
+    - apk add --no-cache openssh-client
+    - mkdir -p ~/.ssh
+    - printf '%s\n' "$METADATA_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+    - chmod 600 ~/.ssh/id_ed25519
+    - ssh-keyscan -p "${METADATA_SSH_PORT:-22}" -H "$METADATA_SSH_HOST" >> ~/.ssh/known_hosts
+  script:
+    - ': "${METADATA_SSH_HOST:?METADATA_SSH_HOST is required}"'
+    - ': "${METADATA_SSH_USER:?METADATA_SSH_USER is required}"'
+    - ': "${METADATA_SSH_PRIVATE_KEY:?METADATA_SSH_PRIVATE_KEY is required}"'
+    - METADATA_SSH_TARGET_PORT="${METADATA_SSH_PORT:-22}"
+    - scp -P "$METADATA_SSH_TARGET_PORT" metadata-api/server.js "$METADATA_SSH_USER@$METADATA_SSH_HOST:/tmp/metadata-api-server.js"
+    - ssh -p "$METADATA_SSH_TARGET_PORT" "$METADATA_SSH_USER@$METADATA_SSH_HOST" "sudo install -o metadata -g metadata -m 640 /tmp/metadata-api-server.js /opt/metadata-api/server.js && sudo systemctl restart metadata-api && systemctl is-active metadata-api"
+
 deploy_dev:
   stage: deploy
   image: alpine:3.22
@@ -210,7 +238,7 @@ deploy_prod:
   tags:
     - ibm
   needs:
-    - build_prod_image
+    - deploy_metadata_api_prod
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: never

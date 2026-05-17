@@ -7,6 +7,8 @@ import { formatDate, formatNumber } from "@/lib/utils";
 import { downloadEvidenceFile } from "@/modules/surveys/repositories/evidence-storage";
 
 const maxEmbeddedPhotoBytes = 8 * 1024 * 1024;
+const pageTop = 44;
+const pageBottom = 40;
 type SignatureValue = { dataUrl: string; signedAt?: string };
 type StoredSignatureValue = { storagePath: string; signedAt?: string; mimeType?: string };
 
@@ -17,32 +19,32 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const pdf = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const margin = 40;
-  let y = 44;
+  let y = pageTop;
 
   y = writeCenteredHeading(pdf, "FORMULIR INSPEKSI KESEHATAN LINGKUNGAN", y, 14);
   y = writeCenteredHeading(pdf, detail.template.name.toUpperCase(), y, 12);
   y += 8;
 
-  y = sectionTitle(pdf, "Identitas MSME/TPP", y);
+  y = sectionTitle(pdf, "Identitas MSME/TPP", y, blockPreviewHeight(detail.identityFields.length));
   for (const field of detail.identityFields) {
     const value = detail.subject.metadata[field.field_key];
     y = writeLine(pdf, field.label, String(value || "-"), y);
   }
 
-  y += 8;
-  y = sectionTitle(pdf, "Hasil Inspeksi", y);
   const scoreRows = [
     ["Total ketidaksesuaian", formatNumber(Number(detail.response.total_nonconformity))],
     ["Skor", formatNumber(Number(detail.response.score))],
     ["Kesimpulan", detail.response.result_label],
     ["Tanggal submit", formatDate(detail.response.submitted_at)],
   ];
+  y += 8;
+  y = sectionTitle(pdf, "Hasil Inspeksi", y, blockPreviewHeight(scoreRows.length));
   for (const [label, value] of scoreRows) {
     y = writeLine(pdf, label, value, y);
   }
 
   y += 8;
-  y = sectionTitle(pdf, "Kriteria Tidak Terpenuhi", y);
+  y = sectionTitle(pdf, "Kriteria Tidak Terpenuhi", y, detail.answers.length ? 58 : 26);
   if (detail.answers.length === 0) {
     y = writeWrapped(pdf, "Tidak ada ketidaksesuaian dicatat.", margin, y, pageWidth - margin * 2, 10) + 8;
   }
@@ -59,7 +61,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   y += 8;
   const responseFields = detail.responseFields.filter((field) => !["photo", "signature"].includes(field.field_type));
   if (responseFields.length) {
-    y = sectionTitle(pdf, "Field Tambahan", y);
+    y = sectionTitle(pdf, "Field Tambahan", y, blockPreviewHeight(responseFields.length));
     for (const field of responseFields) {
       y = writeLine(pdf, field.label, String(detail.response.response_values?.[field.field_key] || "-"), y);
     }
@@ -68,7 +70,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   const photoFields = detail.responseFields.filter((field) => field.field_type === "photo");
   if (photoFields.length || detail.photos.length) {
-    y = sectionTitle(pdf, "Foto Bukti", y);
+    y = sectionTitle(pdf, "Foto Bukti", y, detail.photos.length ? 170 : 26);
     if (detail.photos.length === 0) {
       y = writeWrapped(pdf, "Tidak ada foto bukti diunggah.", margin, y, pageWidth - margin * 2, 10) + 8;
     }
@@ -93,7 +95,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   if (signatureFields.length) {
     y += 8;
-    y = sectionTitle(pdf, "Tanda Tangan", y);
+    y = sectionTitle(pdf, "Tanda Tangan", y, 150);
     y = writeSignatureTable(pdf, signatureFields, y);
   }
 
@@ -106,8 +108,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   });
 }
 
-function sectionTitle(pdf: jsPDF, title: string, y: number) {
-  y = ensureSpace(pdf, y, 36);
+function sectionTitle(pdf: jsPDF, title: string, y: number, minContentHeight = 24) {
+  y = ensureSpace(pdf, y, 36 + minContentHeight);
   pdf.setFillColor(236, 253, 245);
   pdf.rect(40, y - 14, pdf.internal.pageSize.getWidth() - 80, 22, "F");
   pdf.setFont("helvetica", "bold");
@@ -132,8 +134,8 @@ function writeLine(pdf: jsPDF, label: string, value: string, y: number) {
   const lineHeight = 10;
   const labelLines = pdf.splitTextToSize(label, 154) as string[];
   const valueLines = pdf.splitTextToSize(value, 340) as string[];
-  const rowHeight = Math.max(labelLines.length, valueLines.length) * lineHeight + 8;
-  y = ensureSpace(pdf, y, rowHeight + 8);
+  const rowHeight = Math.max(labelLines.length, valueLines.length) * lineHeight + 10;
+  y = ensureSpace(pdf, y, rowHeight);
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(9);
   pdf.text(labelLines, labelX, y);
@@ -153,9 +155,14 @@ function writeWrapped(pdf: jsPDF, text: string, x: number, y: number, width: num
 }
 
 function ensureSpace(pdf: jsPDF, y: number, needed: number) {
-  if (y + needed < pdf.internal.pageSize.getHeight() - 40) return y;
+  if (y + needed < pdf.internal.pageSize.getHeight() - pageBottom) return y;
   pdf.addPage();
-  return 44;
+  return pageTop;
+}
+
+function blockPreviewHeight(rowCount: number) {
+  if (rowCount <= 0) return 24;
+  return Math.min(140, Math.max(34, rowCount * 18));
 }
 
 function writePhotoEvidence(
