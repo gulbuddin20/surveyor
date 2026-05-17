@@ -13,6 +13,19 @@ export const userSchema = z.object({
   isActive: z.coerce.boolean().default(true),
 });
 
+export const userUpdateSchema = userSchema.extend({
+  userId: z.uuid(),
+  password: z.string().min(8, "Password minimal 8 karakter").optional(),
+});
+
+export const userDeleteSchema = z.object({
+  userId: z.uuid(),
+});
+
+export const surveyDeleteSchema = z.object({
+  responseId: z.uuid(),
+});
+
 export const templateSchema = z.object({
   code: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/),
   name: z.string().min(3).max(160),
@@ -142,6 +155,9 @@ export const surveySubmissionSchema = z.object({
 
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UserInput = z.infer<typeof userSchema>;
+export type UserUpdateInput = z.infer<typeof userUpdateSchema>;
+export type UserDeleteInput = z.infer<typeof userDeleteSchema>;
+export type SurveyDeleteInput = z.infer<typeof surveyDeleteSchema>;
 export type TemplateInput = z.infer<typeof templateSchema>;
 export type IdentityFieldInput = z.infer<typeof identityFieldSchema>;
 export type ResponseFieldInput = z.infer<typeof responseFieldSchema>;

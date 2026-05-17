@@ -11,7 +11,9 @@ import type {
   TemplateInput,
   TemplateReorderInput,
   TemplateSettingsInput,
+  UserDeleteInput,
   UserInput,
+  UserUpdateInput,
 } from "@/lib/schemas";
 import type {
   FormulaRule,
@@ -96,6 +98,44 @@ export async function createUser(input: UserInput) {
   });
   if (profileError) throw profileError;
   return data.user;
+}
+
+export async function updateUser(input: UserUpdateInput) {
+  const admin = createSupabaseAdminClient();
+  const authUpdate: Parameters<typeof admin.auth.admin.updateUserById>[1] = {
+    email: input.email,
+    user_metadata: { full_name: input.fullName, role: input.role },
+  };
+  if (input.password) authUpdate.password = input.password;
+
+  const { error } = await admin.auth.admin.updateUserById(input.userId, authUpdate);
+  if (error) throw error;
+
+  const { error: profileError } = await admin.from("profiles").update({
+    full_name: input.fullName,
+    email: input.email,
+    role: input.role,
+    is_active: input.isActive,
+    updated_at: new Date().toISOString(),
+  }).eq("id", input.userId);
+  if (profileError) throw profileError;
+}
+
+export async function deleteUser(input: UserDeleteInput) {
+  const supabase = await createSupabaseServerClient();
+  const { count, error: countError } = await supabase
+    .schema("surveyor")
+    .from("survey_responses")
+    .select("id", { count: "exact", head: true })
+    .eq("surveyor_id", input.userId);
+  if (countError) throw countError;
+  if ((count ?? 0) > 0) {
+    throw new Error("User sudah memiliki riwayat survei. Nonaktifkan user agar riwayat tetap utuh.");
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.auth.admin.deleteUser(input.userId);
+  if (error) throw error;
 }
 
 export async function listFormulas(): Promise<Array<FormulaRule & { survey_templates?: { name: string } }>> {

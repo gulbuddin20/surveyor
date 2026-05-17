@@ -15,6 +15,7 @@ import {
   removeResponseFieldFromForm,
   removeSectionFromForm,
   removeTemplateFromForm,
+  removeUserFromForm,
   reorderIdentityFieldsFromInput,
   reorderQuestionSectionsFromInput,
   reorderQuestionsFromInput,
@@ -27,6 +28,7 @@ import {
   saveSectionFromForm,
   updateFormulaFromForm,
   updateTemplateSettingsFromForm,
+  updateUserFromForm,
 } from "@/modules/admin/services/admin.service";
 
 export async function loadUsersController() {
@@ -56,6 +58,20 @@ export async function createUserAction(formData: FormData) {
   await requireSuperAdmin();
   const result = await createRegularUserFromForm(formData);
   if (!result.ok) throw new Error(result.message ?? "Gagal membuat user");
+  revalidatePath("/admin/users");
+}
+
+export async function updateUserAction(formData: FormData) {
+  const profile = await requireSuperAdmin();
+  const result = await updateUserFromForm(formData, profile.id);
+  if (!result.ok) throw new Error(result.message ?? "Gagal memperbarui user");
+  revalidatePath("/admin/users");
+}
+
+export async function deleteUserAction(formData: FormData) {
+  const profile = await requireSuperAdmin();
+  const result = await removeUserFromForm(formData, profile.id);
+  if (!result.ok) throw new Error(result.message ?? "Gagal menghapus user");
   revalidatePath("/admin/users");
 }
 

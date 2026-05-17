@@ -1,9 +1,11 @@
+import { surveyDeleteSchema } from "@/lib/schemas";
 import type { Profile } from "@/lib/types";
 import {
   createAnswers,
   createPhotos,
   createResponse,
   createSubject,
+  deleteSurveyResponse,
   getTemplateDetail,
   getSurveyResultDetail,
   listSurveyHistory,
@@ -55,7 +57,24 @@ export async function getSurveyHistoryData(
       limit: Number(searchParams.limit ?? 10),
       query: searchParams.q ?? "",
     }),
+    canDelete: profile.role === "super_admin",
   };
+}
+
+export async function deleteSurveyHistoryItem(profile: Profile, formData: FormData) {
+  if (profile.role !== "super_admin") {
+    return { ok: false as const, message: "Hanya super admin yang dapat menghapus riwayat survei" };
+  }
+
+  const parsed = surveyDeleteSchema.safeParse({
+    responseId: formData.get("responseId"),
+  });
+  if (!parsed.success) {
+    return { ok: false as const, message: parsed.error.issues[0]?.message ?? "Riwayat survei tidak valid" };
+  }
+
+  await deleteSurveyResponse(parsed.data.responseId);
+  return { ok: true as const, message: "Riwayat survei dihapus" };
 }
 
 export async function getSurveyEditData(profile: Profile, responseId: string) {

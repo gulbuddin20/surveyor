@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import type { Profile } from "@/lib/types";
 import { createUserAction } from "@/modules/admin/controllers/admin.controller";
+import { UserActions } from "@/modules/admin/components/user-actions";
 
 export function UserManagement({ users }: { users: Profile[] }) {
   return (
@@ -51,12 +52,29 @@ export function UserManagement({ users }: { users: Profile[] }) {
           <CardTitle>Daftar user</CardTitle>
           <CardDescription>{users.length} user terdaftar.</CardDescription>
         </CardHeader>
-        <div className="space-y-3">
+        <div className="space-y-4">
           {users.map((user) => (
-            <div key={user.id} className="rounded-[1.5rem] border border-[color:rgba(22,37,29,0.1)] bg-[color:rgba(255,249,234,0.52)] p-4 transition hover:-translate-y-0.5 hover:bg-[var(--atlas-paper)]">
-              <p className="font-extrabold text-[var(--atlas-ink)]">{user.full_name}</p>
-              <p className="break-all text-sm text-[color:rgba(22,37,29,0.58)]">{user.email}</p>
-              <p className="mt-2 inline-flex rounded-full border border-[color:rgba(22,37,29,0.12)] bg-[color:rgba(255,249,234,0.68)] px-2.5 py-1 text-xs font-extrabold text-[var(--atlas-canopy)]">{user.role}</p>
+            <div
+              key={user.id}
+              className="rounded-[1.5rem] border border-[color:rgba(22,37,29,0.1)] bg-[color:rgba(255,249,234,0.52)] p-4 transition hover:-translate-y-0.5 hover:bg-[var(--atlas-paper)]"
+            >
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div className="min-w-0">
+                  <p className="font-extrabold text-[var(--atlas-ink)]">{user.full_name}</p>
+                  <p className="break-all text-sm text-[color:rgba(22,37,29,0.58)]">{user.email}</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="flex flex-wrap justify-start gap-2 md:justify-end">
+                    <p className="inline-flex rounded-full border border-[color:rgba(22,37,29,0.12)] bg-[color:rgba(255,249,234,0.68)] px-2.5 py-1 text-xs font-extrabold text-[var(--atlas-canopy)]">
+                      {user.role}
+                    </p>
+                    <p className="inline-flex rounded-full border border-[color:rgba(22,37,29,0.12)] bg-[color:rgba(255,249,234,0.68)] px-2.5 py-1 text-xs font-extrabold text-[var(--atlas-ink)]">
+                      {user.is_active ? "Aktif" : "Nonaktif"}
+                    </p>
+                  </div>
+                  <UserActions user={user} />
+                </div>
+              </div>
             </div>
           ))}
         </div>

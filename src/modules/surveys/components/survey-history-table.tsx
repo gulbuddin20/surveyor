@@ -4,17 +4,20 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { MouseEvent } from "react";
-import { Download, Eye, FilePenLine, Loader2 } from "lucide-react";
+import { Download, Eye, FilePenLine, Loader2, Trash2 } from "lucide-react";
+import { ActionForm } from "@/components/ui/action-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ActionMenuItem, ActionMenuLink, ResponsiveActionMenu } from "@/components/ui/responsive-action-menu";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { formatDate, formatNumber } from "@/lib/utils";
 import type { SurveyHistoryPage } from "@/lib/types";
+import { deleteSurveyHistoryAction } from "@/modules/surveys/controllers/survey.controller";
 
 const limitOptions = [10, 20, 50];
 
-export function SurveyHistoryTable({ history }: { history: SurveyHistoryPage }) {
+export function SurveyHistoryTable({ canDelete = false, history }: { canDelete?: boolean; history: SurveyHistoryPage }) {
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -114,7 +117,7 @@ export function SurveyHistoryTable({ history }: { history: SurveyHistoryPage }) 
                       <ScoreBadge score={Number(row.score)} />
                     </td>
                     <td className="rounded-r-2xl px-3 py-3">
-                      <RowActions id={row.id} pendingHref={pendingHref} onNavigate={navigate} />
+                      <RowActions canDelete={canDelete} id={row.id} pendingHref={pendingHref} onNavigate={navigate} />
                     </td>
                   </tr>
                 ))}
@@ -154,7 +157,7 @@ export function SurveyHistoryTable({ history }: { history: SurveyHistoryPage }) 
                   </div>
                 </dl>
                 <div className="mt-4">
-                  <RowActions id={row.id} pendingHref={pendingHref} onNavigate={navigate} />
+                  <RowActions canDelete={canDelete} id={row.id} pendingHref={pendingHref} onNavigate={navigate} />
                 </div>
               </article>
             ))}
@@ -176,10 +179,12 @@ function ScoreBadge({ score }: { score: number }) {
 }
 
 function RowActions({
+  canDelete,
   id,
   pendingHref,
   onNavigate,
 }: {
+  canDelete: boolean;
   id: string;
   pendingHref: string | null;
   onNavigate: (event: MouseEvent<HTMLAnchorElement>, href: string) => void;
@@ -187,25 +192,39 @@ function RowActions({
   const detailHref = `/surveys/${id}`;
   const editHref = `/surveys/${id}/edit`;
   return (
-    <div className="flex flex-wrap justify-end gap-2">
-      <Button asChild variant="outline" size="sm" className="min-h-9 px-3 py-1.5 text-xs">
-        <Link href={detailHref} onClick={(event) => onNavigate(event, detailHref)}>
+    <div className="flex justify-end">
+      <ResponsiveActionMenu title="Aksi survei" description="Pilih aksi untuk riwayat survei ini.">
+        <ActionMenuLink href={detailHref} onClick={(event) => onNavigate(event, detailHref)}>
           {pendingHref === detailHref ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
           {pendingHref === detailHref ? "Memuat..." : "Detail"}
-        </Link>
-      </Button>
-      <Button asChild variant="secondary" size="sm" className="min-h-9 px-3 py-1.5 text-xs">
-        <Link href={editHref} onClick={(event) => onNavigate(event, editHref)}>
+        </ActionMenuLink>
+        <ActionMenuLink href={editHref} onClick={(event) => onNavigate(event, editHref)}>
           {pendingHref === editHref ? <Loader2 className="h-4 w-4 animate-spin" /> : <FilePenLine className="h-4 w-4" />}
           {pendingHref === editHref ? "Memuat..." : "Edit"}
-        </Link>
-      </Button>
-      <Button asChild size="sm" className="min-h-9 px-3 py-1.5 text-xs">
-        <a href={`/surveys/${id}/export`}>
+        </ActionMenuLink>
+        <ActionMenuLink href={`/surveys/${id}/export`}>
           <Download className="h-4 w-4" />
-          PDF
-        </a>
-      </Button>
+          Export PDF
+        </ActionMenuLink>
+      {canDelete ? (
+        <ActionForm
+          action={deleteSurveyHistoryAction}
+          className="contents"
+          confirmActionLabel="Hapus riwayat"
+          confirmDescription="Riwayat survei, jawaban, dan data foto di database akan dihapus. File metadata fisik akan dibersihkan oleh cleanup terjadwal."
+          confirmTitle="Hapus riwayat survei?"
+          confirmVariant="destructive"
+          errorMessage="Riwayat survei gagal dihapus"
+          successMessage="Riwayat survei dihapus."
+        >
+          <input type="hidden" name="responseId" value={id} />
+          <ActionMenuItem type="submit" className="text-[var(--atlas-coral)] hover:bg-[color:rgba(242,111,76,0.1)]">
+            <Trash2 className="h-4 w-4" />
+            Hapus
+          </ActionMenuItem>
+        </ActionForm>
+      ) : null}
+      </ResponsiveActionMenu>
     </div>
   );
 }

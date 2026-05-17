@@ -414,6 +414,40 @@ export async function listSurveyHistory({
   };
 }
 
+export async function deleteSurveyResponse(responseId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: response, error: fetchError } = await supabase
+    .schema("surveyor")
+    .from("survey_responses")
+    .select("id, subject_id")
+    .eq("id", responseId)
+    .single();
+  if (fetchError) throw fetchError;
+
+  const { error: deleteError } = await supabase
+    .schema("surveyor")
+    .from("survey_responses")
+    .delete()
+    .eq("id", responseId);
+  if (deleteError) throw deleteError;
+
+  const { count, error: countError } = await supabase
+    .schema("surveyor")
+    .from("survey_responses")
+    .select("id", { count: "exact", head: true })
+    .eq("subject_id", response.subject_id);
+  if (countError) throw countError;
+
+  if ((count ?? 0) === 0) {
+    const { error: subjectDeleteError } = await supabase
+      .schema("surveyor")
+      .from("msme_subjects")
+      .delete()
+      .eq("id", response.subject_id);
+    if (subjectDeleteError) throw subjectDeleteError;
+  }
+}
+
 export async function listResponsesForUser(userId: string, isAdmin: boolean) {
   const supabase = await createSupabaseServerClient();
   let query = supabase

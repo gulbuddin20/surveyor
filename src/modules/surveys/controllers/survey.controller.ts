@@ -9,6 +9,7 @@ import {
   getSurveyHistoryData,
   getSurveyResultData,
   getSurveyStartData,
+  deleteSurveyHistoryItem,
   submitSurvey,
 } from "@/modules/surveys/services/survey.service";
 
@@ -48,4 +49,12 @@ export async function submitSurveyAction(formData: FormData) {
     revalidatePath(`/surveys/${result.responseId}/edit`);
     redirect(`/surveys/${result.responseId}`);
   }
+}
+
+export async function deleteSurveyHistoryAction(formData: FormData) {
+  const profile = await requireProfile();
+  const result = await deleteSurveyHistoryItem(profile, formData);
+  if (!result.ok) throw new Error(result.message ?? "Gagal menghapus riwayat survei");
+  revalidatePath("/surveys/history");
+  revalidatePath("/dashboard");
 }

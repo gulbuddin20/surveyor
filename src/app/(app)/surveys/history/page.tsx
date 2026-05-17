@@ -7,7 +7,7 @@ export default async function SurveyHistoryPage({
   searchParams: Promise<{ limit?: string; page?: string; q?: string }>;
 }) {
   const params = await searchParams;
-  const { history } = await loadSurveyHistoryController(params);
+  const { canDelete, history } = await loadSurveyHistoryController(params);
 
   return (
     <div className="atlas-reveal space-y-6">
@@ -20,7 +20,7 @@ export default async function SurveyHistoryPage({
           Semua input tersimpan per lokasi dan template. Admin melihat seluruh surveyor, user biasa hanya melihat pekerjaannya sendiri.
         </p>
       </div>
-      <SurveyHistoryTable history={history} />
+      <SurveyHistoryTable canDelete={canDelete} history={history} />
     </div>
   );
 }

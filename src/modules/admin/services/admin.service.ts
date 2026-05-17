@@ -9,7 +9,9 @@ import {
   templateSchema,
   templateReorderSchema,
   templateSettingsSchema,
+  userDeleteSchema,
   userSchema,
+  userUpdateSchema,
 } from "@/lib/schemas";
 import {
   createTemplate,
@@ -19,6 +21,7 @@ import {
   deleteResponseField,
   deleteSection,
   deleteTemplate,
+  deleteUser,
   getTemplateAdminDetail,
   listFormulas,
   listUsers,
@@ -30,6 +33,7 @@ import {
   reorderSectionsAcrossParents,
   updateFormula,
   updateTemplateSettings,
+  updateUser,
   upsertIdentityField,
   upsertQuestion,
   upsertResponseField,
@@ -69,6 +73,33 @@ export async function createRegularUserFromForm(formData: FormData) {
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
   await createUser(parsed.data);
   return { ok: true, message: "User dibuat" };
+}
+
+export async function updateUserFromForm(formData: FormData, actorId: string) {
+  const parsed = userUpdateSchema.safeParse({
+    userId: formData.get("userId"),
+    fullName: formData.get("fullName"),
+    email: formData.get("email"),
+    password: formData.get("password") || undefined,
+    role: formData.get("role"),
+    isActive: formData.get("isActive") === "on",
+  });
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
+  if (parsed.data.userId === actorId && (parsed.data.role !== "super_admin" || !parsed.data.isActive)) {
+    return { ok: false, message: "Akun sendiri tidak boleh dinonaktifkan atau diturunkan rolenya." };
+  }
+  await updateUser(parsed.data);
+  return { ok: true, message: "User diperbarui" };
+}
+
+export async function removeUserFromForm(formData: FormData, actorId: string) {
+  const parsed = userDeleteSchema.safeParse({
+    userId: formData.get("userId"),
+  });
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
+  if (parsed.data.userId === actorId) return { ok: false, message: "Akun sendiri tidak boleh dihapus." };
+  await deleteUser(parsed.data);
+  return { ok: true, message: "User dihapus" };
 }
 
 export async function createTemplateFromForm(formData: FormData) {
